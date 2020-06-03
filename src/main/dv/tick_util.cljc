@@ -709,19 +709,19 @@
   (first-day-of-month (t/date "2020-03-01"))
   (week-num (t/date "2020-03-01"))
   (week-num (t/date "2020-03-01"))
-  (d3/timeWeek.count (t/inst (start-of-year)) (js/Date. 2020 0 1))
-  (d3/timeWeek.count (t/inst (start-of-year)) (js/Date. 2020 0 5))
+  ;(d3/timeWeek.count (t/inst (start-of-year)) (js/Date. 2020 0 1))
+  ;(d3/timeWeek.count (t/inst (start-of-year)) (js/Date. 2020 0 5))
   (week-num (t/date "2020-01-05"))
-  (d3/timeWeek.count (t/inst (start-of-year 2021)) (js/Date. 2021 11 31))
-  (d3/timeWeek.count (t/inst (start-of-year 2021)) (js/Date. 2021 0 1))
+  ;(d3/timeWeek.count (t/inst (start-of-year 2021)) (js/Date. 2021 11 31))
+  ;(d3/timeWeek.count (t/inst (start-of-year 2021)) (js/Date. 2021 0 1))
   (week-num (t/new-date 2020 1 1))
   (week-num (t/new-date 2021 1 1))
   (week-num (t/new-date 2021 12 30))
   (week-num (t/new-date 2021 12 31))
-  (d3/timeWeek.count (t/inst (start-of-year 2021)) (js/Date. 2021 11 30))
+  ;(d3/timeWeek.count (t/inst (start-of-year 2021)) (js/Date. 2021 11 30))
   (week-index (t/date "2020-01-01"))
   (week-index (t/date "2020-01-05"))
-  (week-index (js/Date.))
+  ;(week-index (js/Date.))
   (week-index (t/date "2020-02-01")) ; should be 0
   (week-index (t/date "2020-02-02")) ; should be 1
   (week-index (t/date "2020-02-09"))
@@ -865,7 +865,7 @@
   (tr/read date-reader (tr/write date-writer (t/now)))
   (tr/read date-reader (tr/write date-writer (t/new-period 1 :days)))
   (def w (tr/writer :json))
-  (tr/write w (js/Date.))
+  ;(tr/write w (js/Date.))
   (do
     (def w (tr/writer :json))
     (def r (tr/reader :json))
@@ -1114,9 +1114,11 @@
 ;; Form helpers, str-> tick types and back
 ;; duplicated from fulcro-utils to avoid pulling in this ns
 
-(s/def ::str-or-num (s/or :s string? :n number?))
+#?(:cljs (s/def ::str-or-num (s/or :s string? :n number?)))
 
-(defn parse-int [int-str] (js/parseInt int-str 10))
+(defn parse-int [int-str]
+  #?(:cljs (js/parseInt int-str 10)
+     :clj (Long/parseLong int-str)))
 
 (>defn to-int
   [str-num]
