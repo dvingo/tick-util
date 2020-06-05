@@ -1,3 +1,7 @@
+https://clojars.org/dv/tick-util
+
+[![Clojars Project](https://img.shields.io/clojars/v/dv/tick-util.svg)](https://clojars.org/dv/tick-util)
+
 Extracted from an app, contains some helpers for tick.
 
 Build a deployable jar of this library:
