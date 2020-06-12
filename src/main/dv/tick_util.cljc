@@ -1114,7 +1114,7 @@
 ;; Form helpers, str-> tick types and back
 ;; duplicated from fulcro-utils to avoid pulling in this ns
 
-#?(:cljs (s/def ::str-or-num (s/or :s string? :n number?)))
+(s/def ::str-or-num (s/or :s string? :n number?))
 
 (defn parse-int [int-str]
   #?(:cljs (js/parseInt int-str 10)
