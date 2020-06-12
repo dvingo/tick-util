@@ -2,7 +2,6 @@
   (:refer-clojure :exclude [< > >= <= + format])
   (:require
     #?(:cljs [cljs.reader] :clj [clojure.edn])
-    #?(:cljs ["js-joda" :as j])
     #?(:cljs [java.time :refer
               [Period LocalDate LocalDateTime ZonedDateTime OffsetTime
                Instant OffsetDateTime ZoneId DayOfWeek

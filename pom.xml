@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dv</groupId>
   <artifactId>tick-util</artifactId>
-  <version>2020-06-12</version>
+  <version>2020-06-12-a</version>
   <name>tick-utils</name>
   <description>Utils for juxt/tick</description>
   <url>https://github.com/dvingo/tick-util</url>
@@ -56,9 +56,19 @@
       <version>2.1.0</version>
     </dependency>
     <dependency>
+      <groupId>com.cognitect</groupId>
+      <artifactId>transit-cljs</artifactId>
+      <version>0.8.264</version>
+    </dependency>
+    <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>timbre</artifactId>
       <version>4.10.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.cognitect</groupId>
+      <artifactId>transit-clj</artifactId>
+      <version>1.0.324</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
