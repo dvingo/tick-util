@@ -404,6 +404,8 @@
 ;; There's prob a helper in tick format
 #?(:cljs
    (defn iso-date-str
+     "Returns the ISO 8601 repr just the Date portion
+     Pass any :tick-util/date? type in it will be converted to inst"
      ([] (iso-date-str (t/today)))
      ([d]
       (first (str/split (.toISOString (->inst d)) "T")))))
