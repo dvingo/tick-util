@@ -231,7 +231,7 @@
 
 (defn first-day-of-month
   ([] (first-day-of-month (t/today)))
-  ([date] (-> (t/new-date (t/year date) (t/month date) 1)
+  ([date] (-> (t/new-date (int-year date) (int-month date) 1)
             (t/at (t/midnight)))))
 
 (def start-of-month first-day-of-month)
@@ -252,7 +252,11 @@
 (comment (last-day-of-month (t/date-time "2020-02-03T00:00"))
   (last-day-of-month)
   (last-day-of-month (t/today))
-  (last-day-of-month (t/date "2020-04-05")))
+  (last-day-of-month (t/date "2020-04-05"))
+
+  (last-day-of-month #time/date "2020-09-18" )
+  (last-day-of-month (t/+ (t/today) (t/new-period 3 :months)))
+  )
 
 (defn dates-between [start end]
   (->> (t/range start (t/+ end (t/new-period 1 :days)) (t/new-period 1 :days))
