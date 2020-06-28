@@ -936,6 +936,7 @@
 
 
 (defn format
+  "Any date-like object"
   ([d] (format d default-format))
   ([d fmt]
    (if d

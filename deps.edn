@@ -5,7 +5,7 @@
            com.taoensso/timbre        {:mvn/version "4.10.0"}
            com.taoensso/tufte         {:mvn/version "2.1.0"}
            com.fulcrologic/guardrails {:mvn/version "0.0.12"}
-           tick                       {:mvn/version "0.4.23-alpha"}
+           tick                       {:mvn/version "0.4.26-alpha"}
            ;; Needed for tick in cljs
            thheller/shadow-cljsjs     {:mvn/version "0.0.21"}
 
