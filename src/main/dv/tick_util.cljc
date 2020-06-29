@@ -338,7 +338,7 @@
     (date? d) (t/inst (t/at d (t/midnight)))
     (date-time? d) (t/inst d)
     (instant? d) (t/inst d)
-    :else (throw (error (str "Cannot convert " d " to inst.")))))
+    :else (throw (error (str "Cannot convert " (pr-str d) " to inst.")))))
 
 (comment (->inst (t/today))
   (->inst (t/now))
