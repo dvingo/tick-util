@@ -267,9 +267,11 @@
 
 (defn date-times-between [start end]
   "Return seq of date-times at midnight for each day between start until end."
-  (t/range (at-midnight start) (t/+ end (t/new-period 1 :days))
+  (t/range (at-midnight start) end
     (t/new-period 1 :days)))
-(comment (date-times-between (t/date-time) (last-day-of-month))
+
+(comment
+  (date-times-between (t/date-time) (last-day-of-month))
   (date-times-between (first-day-of-month) (last-day-of-month)))
 
 (defn dates-in-month
@@ -304,7 +306,8 @@
   ([] (into-array (date-times-in-month)))
   ([date]
    (into-array (date-times-in-month date))))
-(comment (date-times-in-month-arr))
+(comment (date-times-in-month-arr)
+  )
 
 (defn period-seq
   "Starting at 'start' - a tick/date, return lazy seq of dates every `period` units."
