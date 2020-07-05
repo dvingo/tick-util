@@ -1144,8 +1144,8 @@
 
 (>defn pos-or-empty
   [i]
-  [string? => ::str-or-num]
-  (if (empty? i)
+  [(s/or :s string? :n number?) => ::str-or-num]
+  (if (and (string? i) (empty? i))
     i
     (Math/max 0 (to-int i))))
 
@@ -1157,3 +1157,12 @@
                 :elsee i)]
     (cond-> i (number? i)
       (t/new-period :days))))
+
+(defn str->hours-duration
+  [s]
+  (let [i (pos-or-empty s)
+        i (cond (string? i) ""
+                (zero? i) 1
+                :elsee i)]
+    (cond-> i (number? i)
+      (t/new-duration :hours))))
