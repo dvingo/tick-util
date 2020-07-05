@@ -16,7 +16,7 @@
     [time-literals.read-write :as rw]
     [taoensso.timbre :as log])
   #?(:clj (:import
-            [java.io ByteArrayInputStream ByteArrayOutputStream]
+            [java.io ByteArrayInputStream ByteArrayOutputStream Writer]
             [java.time Period LocalDate LocalDateTime ZonedDateTime OffsetTime Instant
                        OffsetDateTime ZoneId DayOfWeek LocalTime Month Duration Year YearMonth])))
 
@@ -798,6 +798,25 @@
 ;; Transit
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; copied from time-literals lib
+(defn print-offset [o]
+  (let [duration (:duration o)
+        period   (:period o)]
+    (str "#time/offset \"" (if duration duration "nil") " " (if period period "nil") "\"")))
+
+(comment
+  (pr-str (offset (t/new-duration 1 :hours) (t/new-period 2 :days)))
+  (offset (t/new-period 2 :days))
+  (offset (t/new-duration 2 :minutes))
+  )
+
+#?(:cljs
+   (extend-protocol IPrintWithWriter
+     Period (-pr-writer [d writer opts] (-write writer (print-offset d)))))
+
+#?(:clj (defmethod print-method Offset [c ^Writer w] (.write w ^String ^String (print-offset c))))
+#?(:clj (defmethod print-dup Offset [c ^Writer w] (.write w ^String (print-offset c))))
+
 (def transit-tag "time/tick")
 
 #?(:cljs (deftype TickHandler []
@@ -818,13 +837,54 @@
     {}
     (partition 2
       (interleave
-        [Date DateTime Time Period Duration Instant]
+        [Date DateTime Time Period Duration Instant Offset]
         (repeat tick-transit-write-handler)))))
+
+(defn read-offset
+  [an-offset]
+  (log/info "READING : " (pr-str an-offset))
+  (let [[duration period] (str/split an-offset #" ")
+        period*   (if (= "nil" period) nil (. Period parse period))
+        duration* (if (= "nil" duration) nil (. Duration parse duration))]
+    (log/info "duration " duration)
+    (log/info "period " period)
+    an-offset
+
+    (let [r (->Offset duration* period*)]
+      (log/info "returning: " r) r)))
+
+#?(:cljs
+   (cljs.reader/register-tag-parser! 'time/offset read-offset))
+
+(comment
+  (. Period parse "nil")
+  (offset (t/new-duration 1 :hours) (t/new-period 2 :days))
+  (offset (t/new-period 2 :days))
+  ;(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} #time/offset "#time/duration\"PT1H\" #time/period\"P2D\"" )
+  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-duration 1 :hours))))
+  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-duration 1 :hours) (t/new-period 2 :days))))
+  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-period 2 :days))))
+  (offset (t/new-duration 1 :hours))
+
+  (pr-str (t/new-duration 1 :hours))
+
+
+  ;(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} )
+  ;(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} )
+  ;(clojure.edn/read-string {:readers rw/tags} "#time/duration \"PT2M\"")
+
+  ;(mapv #(do (log/info "Reading: " %) (clojure.edn/read-string {:readers rw/tags} %))
+  ;  (str/split "#time/durationPT1H #time/periodP2D" #" "))
+
+  ;(str/split "#time/periodP2D" #" ")
+  ;(str/split "#time/durationPT2M" #" ")
+  )
 
 (def tick-transit-reader
   {transit-tag
    #?(:cljs (fn [v] (cljs.reader/read-string v))
-      :clj (tr/read-handler #(clojure.edn/read-string {:readers rw/tags} %)))})
+      :clj (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags
+                                                                  'time/offset read-offset)} %)))})
 
 #?(:clj (defn write-tr [data]
           (let [out         (ByteArrayOutputStream. 4096)
