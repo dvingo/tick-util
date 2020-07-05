@@ -812,7 +812,7 @@
 
 #?(:cljs
    (extend-protocol IPrintWithWriter
-     Period (-pr-writer [d writer opts] (-write writer (print-offset d)))))
+     Offset (-pr-writer [d writer opts] (-write writer (print-offset d)))))
 
 #?(:clj (defmethod print-method Offset [c ^Writer w] (.write w ^String ^String (print-offset c))))
 #?(:clj (defmethod print-dup Offset [c ^Writer w] (.write w ^String (print-offset c))))
@@ -842,16 +842,17 @@
 
 (defn read-offset
   [an-offset]
-  (log/info "READING : " (pr-str an-offset))
+  ;(log/info "READING : " (pr-str an-offset))
   (let [[duration period] (str/split an-offset #" ")
         period*   (if (= "nil" period) nil (. Period parse period))
         duration* (if (= "nil" duration) nil (. Duration parse duration))]
-    (log/info "duration " duration)
-    (log/info "period " period)
+    ;(log/info "duration " duration)
+    ;(log/info "period " period)
     an-offset
 
     (let [r (->Offset duration* period*)]
-      (log/info "returning: " r) r)))
+      ;(log/info "returning: " r)
+      r)))
 
 #?(:cljs
    (cljs.reader/register-tag-parser! 'time/offset read-offset))
