@@ -114,8 +114,6 @@
    :months (fn [d v] (.plusMonths d v))
    :years  (fn [d v] (.plusYears d v))})
 
-;; todo enhance to support calling with duration and periods
-
 ;; (offset 1 :days (t/new-duration 20 :minutes))
 ;; (offset (t/new-period 1 :days) (t/new-duration 20 :minutes))
 ;; (offset (t/new-duration 20 :minutes) (t/new-period 1 :days))
@@ -124,9 +122,18 @@
 
 (>defn offset
   "Offset from mix and match units of duration and period"
-  ([val units]
-   [integer? offset-units? => offset?]
+  ([val]
+   [(s/or :period period? :duration duration?) => offset?]
    (cond
+     (period? val) (->Offset nil val)
+     (duration? val) (->Offset val nil)
+     :else (throw (error "Unsupported type passed to offset: " (pr-str val)))))
+  ([val units]
+   [(s/or :int integer? :period period? :duration duration?)
+    (s/or :units offset-units? :period period? :duration duration?) => offset?]
+   (cond
+     (and (period? val) (duration? units)) (->Offset units val)
+     (and (duration? val) (period? units)) (->Offset val units)
      (duration-units? units) (->Offset (t/new-duration val units) nil)
      (period-units? units) (->Offset nil (t/new-period val units))
      :else (throw (error (str "Unknown units passed to offset: " units)))))
@@ -500,7 +507,7 @@
   ([units extract d]
    (extract (t/+ d (t/new-period 1 units)))))
 
-(defn today [] (t/date-time))
+(defn today [] (t/at (t/today) (t/midnight)))
 (def next-day (partial subsequent :days identity))
 (def tomorrow next-day)
 (def next-month (partial subsequent :months identity))
@@ -1088,6 +1095,7 @@
     ""))
 
 (>defn offset-from-date
+  "Returns a date-time by adding the given offset to the provided ref-date."
   [ref-date offset]
   [date? offset? => date-time?]
   (let [period   (:period offset)
@@ -1106,7 +1114,7 @@
     (do
       (log/info "offset " x)
       (str
-        (when (:period x) (format-period (:period x)))
+        (when (:period x) (str (format-period (:period x)) " "))
         (when (:duration x) (format-duration (:duration x)))))
     (period? x) (format-period x)
     (duration? x) (format-duration x)))
@@ -1150,6 +1158,7 @@
     (Math/max 0 (to-int i))))
 
 (defn str->tick-days-period
+  "Returns a string if empty or a tick period with units of days if a valid number is passed."
   [s]
   (let [i (pos-or-empty s)
         i (cond (string? i) ""
@@ -1159,6 +1168,7 @@
       (t/new-period :days))))
 
 (defn str->hours-duration
+  "Returns a string if empty or a tick duration with units of hours if a valid number is passed."
   [s]
   (let [i (pos-or-empty s)
         i (cond (string? i) ""
