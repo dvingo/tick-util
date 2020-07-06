@@ -80,10 +80,29 @@
   (period? (t/date)))
 
 ;; Combines duration and period into one abstration
-(defrecord Offset [duration period])
+#?(:cljs
+   (deftype Offset [period duration]
+     IEquiv
+     (-equiv [this other]
+       (and
+         (= (type this) (type other))
+         (= (.-period this) (.-period other))
+         (= (.-duration this) (.-duration other)))))
+   :clj
+   (deftype Offset [^Period period ^Duration duration ]
+     Object
+     (equals [this other]
+       (and
+         (= (type this) (type other))
+         (= (.-period this) (.-period other))
+         (= (.-duration this) (.-duration other))))))
+
+(= (->Offset (t/new-period 1 :days) (t/new-duration 1 :hours)) (->Offset (t/new-period 1 :days) (t/new-duration 1 :hours)))
 
 (defn offset? [d]
-  (and (map? d) (contains? d :period) (contains? d :duration)))
+  (instance? Offset d))
+
+(comment (offset? (->Offset (t/new-period 1 :days) (t/new-duration 1 :hours))))
 
 (def period-units #{:days :weeks :months :years})
 (def duration-units #{:nanos :micros :millis :seconds :minutes :hours})
@@ -100,12 +119,12 @@
   ([duration-or-period]
    [(s/or :d duration? :p period?) => offset?]
    (cond
-     (duration? duration-or-period) (->Offset duration-or-period nil)
-     (period? duration-or-period) (->Offset nil duration-or-period)))
+     (duration? duration-or-period) (->Offset nil duration-or-period)
+     (period? duration-or-period) (->Offset duration-or-period nil)))
   ([duration period]
    [duration? period? => offset?]
    (assert (duration? duration)) (assert (period? period))
-   (->Offset duration period)))
+   (->Offset period duration)))
 
 (s/def ::opt-map (s/* (s/cat :k keyword? :v any?)))
 
@@ -125,17 +144,17 @@
   ([val]
    [(s/or :period period? :duration duration?) => offset?]
    (cond
-     (period? val) (->Offset nil val)
-     (duration? val) (->Offset val nil)
+     (period? val) (->Offset val nil)
+     (duration? val) (->Offset nil val)
      :else (throw (error "Unsupported type passed to offset: " (pr-str val)))))
   ([val units]
    [(s/or :int integer? :period period? :duration duration?)
     (s/or :units offset-units? :period period? :duration duration?) => offset?]
    (cond
-     (and (period? val) (duration? units)) (->Offset units val)
-     (and (duration? val) (period? units)) (->Offset val units)
-     (duration-units? units) (->Offset (t/new-duration val units) nil)
-     (period-units? units) (->Offset nil (t/new-period val units))
+     (and (period? val) (duration? units)) (->Offset val units)
+     (and (duration? val) (period? units)) (->Offset units val)
+     (duration-units? units) (->Offset nil (t/new-duration val units))
+     (period-units? units) (->Offset (t/new-period val units) nil)
      :else (throw (error (str "Unknown units passed to offset: " units)))))
 
   ([val units val2 units2]
@@ -148,12 +167,12 @@
                     (period-units? units2) (t/new-period val2 units2))]
      (when (and (nil? duration) (nil? period))
        (throw (error (str "Unknown units passed to offset: " units " and " units2))))
-     (->Offset duration period))))
-
+     (->Offset period duration))))
 
 (comment
   (offset 1 :days 2 :hours)
-  (offset 1 :minutes 2 :weeks)
+  (.-period (offset 1 :minutes 2 :weeks))
+  (.-period (->Offset (t/new-period 1 :weeks) nil))
   (offset 1 :seconds 2 :weeks)
   )
 (comment (offset? (->Offset nil nil)))
@@ -799,9 +818,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; copied from time-literals lib
-(defn print-offset [o]
-  (let [duration (:duration o)
-        period   (:period o)]
+(defn print-offset [^Offset o]
+  (let [duration (.-duration o)
+        period   (.-period o)]
     (str "#time/offset \"" (if duration duration "nil") " " (if period period "nil") "\"")))
 
 (comment
@@ -837,6 +856,7 @@
     {}
     (partition 2
       (interleave
+        ;; todo add all the types here
         [Date DateTime Time Period Duration Instant Offset]
         (repeat tick-transit-write-handler)))))
 
