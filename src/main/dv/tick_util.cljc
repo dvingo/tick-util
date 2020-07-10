@@ -21,8 +21,6 @@
             [java.time Period LocalDate LocalDateTime ZonedDateTime OffsetTime Instant
                        OffsetDateTime ZoneId DayOfWeek LocalTime Month Duration Year YearMonth])))
 
-(def Error #?(:cljs js/Error :clj Exception))
-
 (defn error [& msg]
   #?(:cljs (js/Error. (apply str msg))
      :clj (RuntimeException. (apply str msg))))
@@ -371,7 +369,9 @@
   ;; similar to range:
   (take 10 (t/range (t/date-time "2020-03-15T00:00") nil (t/new-period 7 :days))))
 
-(def days-seq (partial period-seq (t/new-period 1 :days)))
+(def days-seq
+  "Returns an infinite lazy seq of dates starting at the passed in date"
+  (partial period-seq (t/new-period 1 :days)))
 (comment (take 10 (days-seq (t/today))))
 
 (defn interval-seq
@@ -413,12 +413,12 @@
   [string]
   (try
     (t/date string)
-    (catch Error e nil)))
+    (catch #?(:cljs js/Error :clj Exception) e nil)))
 
 (defn time [v]
   (try
     (t/time (->instant v))
-    (catch Error e nil)))
+    (catch #?(:cljs js/Error :clj Exception) e nil)))
 
 (comment (date "2020-05-33"))
 
@@ -1039,6 +1039,7 @@
 ;; https://js-joda.github.io/js-joda/class/packages/core/src/format/DateTimeFormatter.js~DateTimeFormatter.html#static-method-ofPattern
 
 (def default-format "eee MMM dd, yyyy")
+(def default-format-w-time "eee MMM dd, yyyy @ HH:mm")
 (def full-format "eeee MMM dd, yyyy")
 
 (defn format
@@ -1048,6 +1049,11 @@
    (if d
      (t/format (t/formatter fmt) (->date-time d))
      "")))
+
+(>defn format-w-time
+  [d]
+  [date-time? => string?]
+  (t/format (t/formatter default-format-w-time) (->date-time d)))
 
 (defn weekday-format [d] (format d "eee MMM dd"))
 (defn weekday-format-w-time [d] (format d "eee MMM dd @ HH:mm"))
