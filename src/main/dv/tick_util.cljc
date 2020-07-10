@@ -1,5 +1,5 @@
 (ns dv.tick-util
-  (:refer-clojure :exclude [< > >= <= + format])
+  (:refer-clojure :exclude [< > >= <= + format time])
   (:require
     #?(:cljs [cljs.reader] :clj [clojure.edn])
     #?(:cljs [java.time :refer
@@ -20,6 +20,8 @@
             [java.io ByteArrayInputStream ByteArrayOutputStream Writer]
             [java.time Period LocalDate LocalDateTime ZonedDateTime OffsetTime Instant
                        OffsetDateTime ZoneId DayOfWeek LocalTime Month Duration Year YearMonth])))
+
+(def Error #?(:cljs js/Error :clj Exception))
 
 (defn error [& msg]
   #?(:cljs (js/Error. (apply str msg))
@@ -149,8 +151,6 @@
 (def offset-units? offset-units)
 (def period-units? period-units)
 (def duration-units? duration-units)
-
-
 
 (s/def ::opt-map (s/* (s/cat :k keyword? :v any?)))
 
@@ -394,6 +394,8 @@
     (date? d) (t/inst (t/at d (t/midnight)))
     (date-time? d) (t/inst d)
     (instant? d) (t/inst d)
+    (time? d) (t/at (t/today) d)
+    (inst? d) d
     :else (throw (error "Cannot convert " (pr-str d) " to inst."))))
 
 (comment (->inst (t/today))
@@ -411,7 +413,13 @@
   [string]
   (try
     (t/date string)
-    (catch #?(:cljs js/Error :clj Exception) e nil)))
+    (catch Error e nil)))
+
+(defn time [v]
+  (try
+    (t/time (->instant v))
+    (catch Error e nil)))
+
 (comment (date "2020-05-33"))
 
 (defn ->date [v]
@@ -1264,3 +1272,7 @@
                 :elsee i)]
     (cond-> i (number? i)
       (t/new-duration :hours))))
+
+(comment
+  (t/time (->instant (t/inst)) )
+  )
