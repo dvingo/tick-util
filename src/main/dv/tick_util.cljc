@@ -1055,6 +1055,14 @@
   [date-time? => string?]
   (t/format (t/formatter default-format-w-time) (->date-time d)))
 
+(>defn format-time
+  "HH:mm"
+  [t]
+  [time? => string?]
+  (str (t/hour t) ":" (t/minute t)))
+
+(comment (format-time (t/time "20:23")))
+
 (defn weekday-format [d] (format d "eee MMM dd"))
 (defn weekday-format-w-time [d] (format d "eee MMM dd @ HH:mm"))
 
