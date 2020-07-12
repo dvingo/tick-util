@@ -25,6 +25,9 @@
   #?(:cljs (js/Error. (apply str msg))
      :clj (RuntimeException. (apply str msg))))
 
+(defn throw* [& args]
+  (throw (apply error args)))
+
 (def Date LocalDate)
 (def DateTime LocalDateTime)
 (def Time LocalTime)
@@ -439,6 +442,14 @@
     (date? v) (t/at v (t/midnight))
     (instant? v) (t/date-time v)
     (inst? v) (t/date-time v)
+    :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
+
+(defn ->time [v]
+  (cond
+    (date-time? v) (t/time v)
+    (date? v) (t/midnight)
+    (instant? v) (t/time (t/date-time v))
+    (inst? v) (t/time (t/date-time v))
     :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
 
 (comment
@@ -1077,6 +1088,31 @@
 
 (defn format-full [d] (format d full-format))
 
+
+(defn format-relative-date
+  "d in relation to target"
+  [target d]
+  (cond
+    (= target d) "Today"
+    (date? d) (weekday-format d)
+    (date-time? d) (weekday-format-w-time d)))
+
+;; todo fix
+(defn format-relative-time [target t]
+  "d in relation to target"
+  (cond
+    (= target t) "Now"
+    (time? t) (format-time t)))
+
+(defn format-relative
+  "d in relation to target"
+  [target d]
+  (cond
+    (and (date? target) (date? d)) (format-relative-date target d)
+    (and (time? target) (time? d)) (format-relative-time target d)
+    :else (throw* "Unsupported types passed to format-relative: " (pr-str target) " " (pr-str d)))
+  )
+
 ;(defn period->map
 ;  {:days (t/truncate days)})
 (comment
@@ -1288,5 +1324,5 @@
       (t/new-duration :hours))))
 
 (comment
-  (t/time (->instant (t/inst)) )
+  (t/time (->instant (t/inst)))
   )
