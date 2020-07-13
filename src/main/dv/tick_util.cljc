@@ -697,6 +697,7 @@
         intvl     (t/bounds sunday (t/new-date (t/year date) 12 31))]
     (map #(apply t/new-interval %)
       (t/divide-by (t/new-period 7 :days) intvl))))
+
 (comment (get-weeks (t/date)))
 
 ;; todo test, need to get full list of interval relations, see comment below here,
@@ -709,6 +710,34 @@
      (t/relation d intvl)))
   ([start end d]
    (within? (t/new-interval start end) d)))
+
+(defn within-new?
+  "Is date inside given interval (or start end)"
+  ([intvl d]
+   (t/< (->date-time (t/beginning intvl)) (->date-time d) (->date-time (t/end intvl))))
+  ([start end d]
+   (t/< (->date-time start) (->date-time d) (->date-time end))))
+
+(comment
+  (within-orig?
+    {:tick/beginning #time/date-time"2019-12-29T00:00", :tick/end #time/date-time"2020-01-05T00:00"}
+    (t/date "2020-01-05")
+    )
+
+  (within?
+    {:tick/beginning #time/date-time"2019-12-29T00:00", :tick/end #time/date-time"2020-01-05T00:00"}
+    (t/date "2020-01-05")
+    )
+
+  (within? (t/yesterday) (t/tomorrow) (t/today))
+  (within? (t/yesterday) (t/today) (t/today))
+  (within? (t/new-interval (t/yesterday) (t/tomorrow)) (t/now))
+  (within? (start-of-year) (t/date-time) (t/date-time))
+  (within? (start-of-year) (t/date-time) (t/date-time))
+  (within? (start-of-year) (t/yesterday) (t/date-time))
+  (within? (start-of-year) (t/date-time) (t/yesterday))
+  (within? (t/new-interval (start-of-year) (t/date-time)) (t/today))
+  )
 
 (comment
   ;from tick.interval
@@ -729,11 +758,6 @@
      preceded-by?   :preceded-by})
   )
 
-(comment
-  (within? (start-of-year) (t/date-time) (t/date-time))
-  (within? (start-of-year) (t/yesterday) (t/date-time))
-  (within? (t/new-interval (start-of-year) (t/date-time)) (t/date-time))
-  )
 
 ;; This now appears to be working, need to add tests.
 (defn week-num*
@@ -750,10 +774,10 @@
 
 (comment
   (time (week-num (t/new-date 2021 3 5)))
-  (time (week-num* (t/new-date 2021 3 5)))
-  )
+  (time (week-num* (t/new-date 2021 3 5))) )
 
 (comment (week-num (t/new-date 2021 3 5))
+  (week-num #time/date "2020-01-05")
   (week-num (t/new-date 2021 12 30))
   (week-num (t/new-date 2021 12 30))
   (week-num (t/new-date 2020 1 1))
@@ -776,6 +800,15 @@
   (let [d (t/date d)]
     (- (week-num d)
       (-> (first-day-of-month d) week-num))))
+
+(comment
+  (week-index #time/date "2020-01-05")
+  (week-index (t/date "2020-01-05"))
+  (week-num (first-day-of-month (t/date "2020-01-05")))
+
+  (t/date (t/date "2020-01-05"))
+
+  )
 
 (defn capitalized-month [date]
   (str/capitalize (str (t/month date))))
