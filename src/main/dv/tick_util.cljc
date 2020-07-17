@@ -12,6 +12,7 @@
     [cognitect.transit :as tr]
     [com.fulcrologic.guardrails.core :refer [>defn >def | =>]]
     [tick.alpha.api :as t]
+    [tick.core :refer [ITimeComparison]]
     [tick.locale-en-us]
     [time-literals.read-write :as rw]
     #?(:clj [taoensso.nippy :as nippy])
@@ -468,12 +469,29 @@
 (defn today-dt []
   (t/at (t/today) (t/midnight)))
 
+;; for some reason the compiler is associating clojure.core/< with the
+;; ones defined in this namespace resulting in the comparison
+;; functions below being called, so I add support for comparing them
+;; using the tick protocol.
+(extend-protocol ITimeComparison
+  #?(:clj Long :cljs number)
+  (< [x y] (clojure.core/< x y))
+  (<= [x y] (clojure.core/<= x y))
+  (> [x y] (clojure.core/> x y))
+  (>= [x y] (clojure.core/>= x y)))
+
 (defn make-compare
   [op]
   (fn [d1 d2]
-    (let [d1 (->instant d1)
-          d2 (->instant d2)]
-      (op d1 d2))))
+    ;; for some reason the compiler is associating clojure.core/< with the
+    ;; one defined in this namespace
+    ;; so we check for times
+    (cond (or (int? d1) (int? d2))
+          (op d1 d2)
+          :else
+          (let [d1 (->instant d1)
+                d2 (->instant d2)]
+            (op d1 d2)))))
 
 (def > (make-compare t/>))
 (def < (make-compare t/<))
@@ -782,7 +800,7 @@
 
 (comment
   (time (week-num (t/new-date 2021 3 5)))
-  (time (week-num* (t/new-date 2021 3 5))) )
+  (time (week-num* (t/new-date 2021 3 5))))
 
 (comment (week-num (t/new-date 2021 3 5))
   (week-num #time/date "2020-01-05")
@@ -1112,9 +1130,18 @@
   "HH:mm"
   [t]
   [time? => string?]
-  (str (t/hour t) ":" (t/minute t)))
+  (let [hour   (t/hour t)
+        minute (t/minute t)]
+    ;; You can use (str t) to render the time but it will show highest
+    ;; precision - like millis and nanos.
+    (str
+      (if (clojure.core/< hour 10) (str "0" hour) hour)
+      ":"
+      (if (clojure.core/< minute 10) (str "0" minute) minute))))
 
-(comment (format-time (t/time "20:23")))
+(comment
+  (format-time (t/time "20:06:12"))
+  (format-time (t/time "20:23")))
 
 (defn weekday-format [d] (format d "eee MMM dd"))
 (defn weekday-format-w-time [d] (format d "eee MMM dd @ HH:mm"))
