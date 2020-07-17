@@ -21,6 +21,14 @@
             [java.time Period LocalDate LocalDateTime ZonedDateTime OffsetTime Instant
                        OffsetDateTime ZoneId DayOfWeek LocalTime Month Duration Year YearMonth])))
 
+;;;
+;;; Docs for date time types:
+
+;;; https://js-joda.github.io/js-joda/manual/LocalDate.html
+;;; https://docs.oracle.com/javase/8/docs/api/java/time/LocalDate.html
+;;;
+
+
 (defn error [& msg]
   #?(:cljs (js/Error. (apply str msg))
      :clj (RuntimeException. (apply str msg))))
@@ -794,6 +802,7 @@
   (week-num (t/new-date 2023 1 2))
   (week-num (t/new-date 2023 1 8)))
 
+;; todo rename to week-num-of-month
 (defn week-index
   "Week number within this month for given date `d`, subtracts week of `d` and week-num of beginning of month."
   [d]
