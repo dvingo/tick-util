@@ -95,14 +95,15 @@
 ;; Combines duration and period into one abstration
 ;; Todo I should lock down the semantics for this - the intention is that the duration is always less than 24 hours
 ;; and the period is at least one day.
+
 #?(:cljs
-   (deftype Offset [period duration]
+   (deftype Offset [^Period period ^Duration duration]
      IEquiv
      (-equiv [this other]
        (and
          (= (type this) (type other))
-         (= (.-period this) (.-period other))
-         (= (.-duration this) (.-duration other)))))
+         (= (.-period this) (.-period ^clj other))
+         (= (.-duration this) (.-duration ^clj other)))))
    :clj
    (deftype Offset [^Period period ^Duration duration]
      Object
