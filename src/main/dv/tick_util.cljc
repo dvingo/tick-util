@@ -923,6 +923,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; copied from time-literals lib
+
+;; period prints first then duration
 (defn print-offset [^Offset o]
   (let [duration (.-duration o)
         period   (.-period o)]
@@ -966,10 +968,11 @@
         (repeat tick-transit-write-handler)))))
 
 (defn read-offset
+  "Period is printed first then duration."
   [offset-str]
   (let [[period duration] (str/split offset-str #" ")
-        period*   (if (= "nil" period) nil (. Period parse period))
-        duration* (if (= "nil" duration) nil (. Duration parse duration))]
+        period*           (if (= "nil" period) nil (. Period parse period))
+        duration*         (if (= "nil" duration) nil (. Duration parse duration))]
     (->Offset period* duration*)))
 
 #?(:cljs (cljs.reader/register-tag-parser! 'time/offset read-offset))
