@@ -97,7 +97,7 @@
 ;; and the period is at least one day.
 
 #?(:cljs
-   (deftype Offset [^Period period ^Duration duration]
+   (deftype Offset [period duration]
      IEquiv
      (-equiv [this other]
        (and
@@ -105,7 +105,7 @@
          (= (.-period this) (.-period ^clj other))
          (= (.-duration this) (.-duration ^clj other)))))
    :clj
-   (deftype Offset [^Period period ^Duration duration]
+   (deftype Offset [period duration]
      Object
      (equals [this other]
        (and
