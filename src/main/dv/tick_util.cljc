@@ -1269,6 +1269,23 @@
   (.plusMinutes (t/new-duration 1 :hours) 20)
   )
 
+(>defn period
+  [num units & args]
+  [int? period-units? (s/* (s/cat :n int? :v period-units?)) => period?]
+  (reduce (fn [acc [val units]]
+            (if-let [f (get plus-period-fns units)]
+              (f acc val)
+              (throw (error "Unknown units passed to period: " units))))
+    (t/new-period num units)
+    (partition 2 args)))
+
+(comment
+  (period -1 :years 2 :days)
+  (period 1 :years 2 :days)
+  (.plusDays (period 1 :days) 20)
+  )
+
+
 (defn format-duration
   [du]
   (when du
