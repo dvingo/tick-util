@@ -926,7 +926,7 @@
 (defn print-offset [^Offset o]
   (let [duration (.-duration o)
         period   (.-period o)]
-    (str "#time/offset \"" (if duration duration "nil") " " (if period period "nil") "\"")))
+    (str "#time/offset \"" (if period period "nil") " " (if duration duration "nil") "\"")))
 
 (comment
   (pr-str (offset (t/new-duration 1 :hours) (t/new-period 2 :days)))
