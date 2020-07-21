@@ -166,9 +166,9 @@
 (s/def ::opt-map (s/* (s/cat :k keyword? :v any?)))
 
 (def plus-period-fns
-  {:days   (fn [d v] (.plusDays d v))
-   :months (fn [d v] (.plusMonths d v))
-   :years  (fn [d v] (.plusYears d v))})
+  {:days   (fn [d v] (.plusDays #?(:cljs ^js d :clj d) v))
+   :months (fn [d v] (.plusMonths #?(:cljs ^js d :clj d) v))
+   :years  (fn [d v] (.plusYears #?(:cljs ^js d :clj d) v))})
 
 ;; (offset 1 :days (t/new-duration 20 :minutes))
 ;; (offset (t/new-period 1 :days) (t/new-duration 20 :minutes))
@@ -1236,13 +1236,13 @@
 (def duration-unit-keys [:hours :minutes :seconds :millis :micros :nanos])
 
 (def plus-duration-fns
-  {:nanos   (fn [d v] (.plusNanos d v))
+  {:nanos   (fn [d v] (.plusNanos #?(:cljs ^js d :clj d) v))
    ;; there is no plusMicros in java.time.Duration
-   :micros  (fn [d v] (.plusNanos d (* 1000 v)))
-   :millis  (fn [d v] (.plusMillis d v))
-   :seconds (fn [d v] (.plusSeconds d v))
-   :minutes (fn [d v] (.plusMinutes d v))
-   :hours   (fn [d v] (.plusHours d v))})
+   :micros  (fn [d v] (.plusNanos #?(:cljs ^js d :clj d) (* 1000 v)))
+   :millis  (fn [d v] (.plusMillis #?(:cljs ^js d :clj d) v))
+   :seconds (fn [d v] (.plusSeconds #?(:cljs ^js d :clj d) v))
+   :minutes (fn [d v] (.plusMinutes #?(:cljs ^js d :clj d) v))
+   :hours   (fn [d v] (.plusHours #?(:cljs ^js d :clj d) v))})
 
 (comment (duration->map (t/new-duration 1 :minutes)))
 
