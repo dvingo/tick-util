@@ -95,7 +95,7 @@
 
 (comment (time-type? (t/now)))
 
-(declare offset + - add-offset subtract-offset offset-type?)
+(declare offset + - add-offset subtract-offset offset-type? -period -duration)
 
 (def date-type? (some-fn instant? date? date-time?))
 (def time-type? (some-fn instant? time? date? date-time?))
@@ -110,8 +110,8 @@
      (-equiv [this other]
        (and
          (= (type this) (type other))
-         (= (.-period this) (.-period #?(:cljs ^clj other :clj other)))
-         (= (.-duration this) (.-duration #?(:cljs ^clj other :clj other)))))
+         (= (.-period this) (-period other))
+         (= (.-duration this) (-duration other))))
      ITimeArithmetic
      (+ [offset other] (add-offset offset other))
      (- [offset other] (subtract-offset offset other)))
@@ -127,14 +127,17 @@
      (+ [offset other] (add-offset offset other))
      (- [offset other] (subtract-offset offset other))))
 
+(defn- -period [offset] (.-period ^{:tag #?(:cljs clj :clj Offset)} offset))
+(defn- -duration [offset] (.-duration ^{:tag #?(:cljs clj :clj Offset)} offset))
+
 (defn offset? [d] (instance? Offset d))
 (def offset-type? (some-fn offset? duration? period?))
 
 (>defn add-offset*
   [d ^Offset offset]
   [time-type? offset? => time-type?]
-  (let [duration (.-duration #?(:cljs ^clj offset :clj offset))
-        period   (.-period #?(:cljs ^clj offset :clj offset))]
+  (let [duration (-duration offset)
+        period   (-period offset)]
     (cond-> d
       duration (t/+ duration)
       period (t/+ period))))
@@ -152,23 +155,23 @@
     (add-offset* v2 v1)
 
     (and (offset? v1) (period? v2))
-    (offset (t/+ (.-period ^{:tag #?(:cljs clj :clj Offset)} v1) v2) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1))
+    (offset (t/+ (-period v1) v2) (-duration v1))
 
     (and (period? v1) (offset? v2))
-    (offset (t/+ (.-period ^{:tag #?(:cljs clj :clj Offset)} v2) v1) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2))
+    (offset (t/+ (-period v2) v1) (-duration v2))
 
     (and (offset? v1) (duration? v2))
-    (offset (.-period ^{:tag #?(:cljs clj :clj Offset)} v1)
-      (if (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1) (t/+ (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1) v2) v2))
+    (offset (-period v1)
+      (if (-duration v1) (t/+ (-duration v1) v2) v2))
 
     (and (duration? v1) (offset? v2))
-    (offset (.-period ^{:tag #?(:cljs clj :clj Offset)} v2)
-      (if (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2) (t/+ (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2) v1) v1))
+    (offset (-period v2)
+      (if (-duration v2) (t/+ (-duration v2) v1) v1))
 
     (and (offset? v1) (offset? v2))
     (offset
-      (+ (.-period ^{:tag #?(:cljs clj :clj Offset)} v1) (.-period ^{:tag #?(:cljs clj :clj Offset)} v2))
-      (+ (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2)))))
+      (+ (-period v1) (-period v2))
+      (+ (-duration v1) (-duration v2)))))
 
 (comment
   (t/+ (duration 5 :minutes) (offset (t/new-duration 25 :minutes)))
@@ -178,8 +181,8 @@
 (>defn subtract-offset*
   [d ^Offset offset]
   [time-type? offset? => time-type?]
-  (let [duration (.-duration ^{:tag #?(:cljs clj :clj Offset)} offset)
-        period   (.-period ^{:tag #?(:cljs clj :clj Offset)} offset)]
+  (let [duration (-duration offset)
+        period   (-period offset)]
     (cond-> d
       duration (t/- duration)
       period (t/- period))))
@@ -197,21 +200,21 @@
     (subtract-offset* v2 v1)
 
     (and (offset? v1) (period? v2))
-    (offset (t/- (.-period ^{:tag #?(:cljs clj :clj Offset)} v1) v2) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1))
+    (offset (t/- (-period v1) v2) (-duration v1))
 
     (and (period? v1) (offset? v2))
-    (offset (t/- (.-period ^{:tag #?(:cljs clj :clj Offset)} v2) v1) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2))
+    (offset (t/- (-period v2) v1) (-duration v2))
 
     (and (offset? v1) (duration? v2))
-    (offset (.-period ^{:tag #?(:cljs clj :clj Offset)} v1) (t/- (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1) v2))
+    (offset (-period v1) (t/- (-duration v1) v2))
 
     (and (duration? v1) (offset? v2))
-    (offset (.-period ^{:tag #?(:cljs clj :clj Offset)} v2) (t/- (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2) v1))
+    (offset (-period v2) (t/- (-duration v2) v1))
 
     (and (offset? v1) (offset? v2))
     (offset
-      (- (.-period ^{:tag #?(:cljs clj :clj Offset)} v1) (.-period ^{:tag #?(:cljs clj :clj Offset)} v2))
-      (- (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2)))))
+      (- (-period v1) (-period v2))
+      (- (-duration v1) (-duration v2)))))
 
 (extend-protocol ITimeArithmetic
   #?(:clj Object :cljs object)
@@ -1202,8 +1205,15 @@
     (and (offset-type? v1) (time-type? v2))
     (t/+ (->instant v2) v1)
 
-    (and (time-type? v1) (offset-type? v2))
-    (t/+ (->instant v1) v2)
+    (and (time-type? v1) (offset-type? v2)) (t/+ (->instant v1) v2)
+
+    (and (period? v1) (offset? v2)) (offset (+ (-period v2) v1) (-duration v2))
+    (and (offset? v1) (period? v2)) (offset (+ (-period v1) v2) (-duration v1))
+
+    (and (offset? v1) (duration? v2)) (offset (-period v1) (+ (-duration v1) v2))
+    (and (duration? v1) (offset? v2)) (offset (-period v2) (+ (-duration v2) v1))
+
+    ;;todo i should add support for & args by using reduce to call + again 2 args at a time.
 
     :else
     (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
@@ -1211,9 +1221,11 @@
 (comment
   (offset-type? #time/date "2020-07-21")
   (time-type? #time/date "2020-07-21")
-  (+ #time/date "2020-07-21" #time/period "P1D" )
-  (t/+ (->instant #time/date "2020-07-21") #time/period "P1D" )
+  (+ #time/date "2020-07-21" #time/period "P1D")
+  (t/+ (->instant #time/date "2020-07-21") #time/period "P1D")
   (+ #time/date "2020-07-21", #time/period "P1D")
+  (+ (period 1 :weeks) (offset 1 :days))
+  (+ (period 1 :weeks) (offset 1 :minutes))
   )
 
 (>defn -
@@ -1242,6 +1254,16 @@
     (and (time-type? v1) (offset-type? v2))
     (t/- (->instant v1) v2)
 
+    ;; returns a period
+    (and (period? v1) (offset? v2)) (- v1 (-period v2))
+
+    (and (offset? v1) (period? v2)) (offset (- (-period v1) v2) (-duration v1))
+
+    ;; returns a duration
+    (and (duration? v1) (offset? v2)) (- v1 (-duration v2))
+
+    (and (offset? v1) (duration? v2)) (offset (-period v1) (- (-duration v1) v2))
+
     :else
     (throw (error "Unkown types passed to -: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
 
@@ -1256,6 +1278,7 @@
   (+ (t/new-period 25 :days) (t/now))
   (+ (t/now) (t/new-duration 25 :minutes))
   (+ (t/now) (t/new-period 25 :days))
+  (+ (offset (t/new-duration 25 :minutes)) (period 2 :weeks))
 
   (- (duration 10 :minutes) (duration 10 :hours))
   (- (period 1 :days) (duration 10 :hours))
@@ -1268,6 +1291,9 @@
   (- (t/new-period 25 :days) (t/now))
   (- (t/now) (t/new-duration 25 :minutes))
   (- (t/now) (t/new-period 25 :days))
+  (- (offset (t/new-duration 25 :minutes)) (period 2 :weeks))
+  (-  (period 2 :weeks) (offset (t/new-duration 25 :minutes)))
+  (-  (period 2 :weeks) (offset (t/new-period 1 :days) (t/new-duration 25 :minutes)))
 
   (reduce t/+ (t/new-duration 0 :seconds) ())
   (t/+ (today->instant) (t/new-duration 20 :minutes))
