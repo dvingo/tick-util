@@ -20,9 +20,7 @@
   #?(:clj (:import
             [java.io ByteArrayInputStream ByteArrayOutputStream Writer]
             [java.time Period LocalDate LocalDateTime ZonedDateTime OffsetTime Instant
-                       OffsetDateTime ZoneId DayOfWeek LocalTime Month Duration Year YearMonth])
-
-     ))
+                       OffsetDateTime ZoneId DayOfWeek LocalTime Month Duration Year YearMonth])))
 
 ;;;
 ;;; Docs for date time types:
@@ -97,7 +95,7 @@
 
 (comment (time-type? (t/now)))
 
-(declare offset? offset + -)
+(declare offset? offset + - add-offset subtract-offset)
 
 (def date-type? (some-fn instant? date? date-time?))
 (def time-type? (some-fn instant? time? date? date-time?))
@@ -107,6 +105,28 @@
 ;; Todo I should lock down the semantics for this - the intention is that the duration is always less than 24 hours
 ;; and the period is at least one day.
 
+#?(:cljs
+   (deftype Offset [period duration]
+     IEquiv
+     (-equiv [this other]
+       (and
+         (= (type this) (type other))
+         (= (.-period this) (.-period #?(:cljs ^clj other :clj other)))
+         (= (.-duration this) (.-duration #?(:cljs ^clj other :clj other)))))
+     ITimeArithmetic
+     (+ [offset other] (add-offset offset other))
+     (- [offset other] (subtract-offset offset other)))
+   :clj
+   (deftype Offset [period duration]
+     Object
+     (equals [this other]
+       (and
+         (= (type this) (type other))
+         (= (.-period this) (.-period other))
+         (= (.-duration this) (.-duration other))))
+     ITimeArithmetic
+     (+ [offset other] (add-offset offset other))
+     (- [offset other] (subtract-offset offset other))))
 
 (>defn add-offset*
   [d ^Offset offset]
@@ -130,23 +150,23 @@
     (add-offset* v2 v1)
 
     (and (offset? v1) (period? v2))
-    (offset (t/+ (.-period ^clj v1) v2) (.-duration ^clj v1))
+    (offset (t/+ (.-period ^{:tag #?(:cljs clj :clj Offset)} v1) v2) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1))
 
     (and (period? v1) (offset? v2))
-    (offset (t/+ (.-period ^clj v2) v1) (.-duration ^clj v2))
+    (offset (t/+ (.-period ^{:tag #?(:cljs clj :clj Offset)} v2) v1) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2))
 
     (and (offset? v1) (duration? v2))
-    (offset (.-period ^clj v1)
-      (if (.-duration ^clj v1) (t/+ (.-duration ^clj v1) v2) v2))
+    (offset (.-period ^{:tag #?(:cljs clj :clj Offset)} v1)
+      (if (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1) (t/+ (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1) v2) v2))
 
     (and (duration? v1) (offset? v2))
-    (offset (.-period ^clj v2)
-      (if (.-duration ^clj v2) (t/+ (.-duration ^clj v2) v1) v1))
+    (offset (.-period ^{:tag #?(:cljs clj :clj Offset)} v2)
+      (if (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2) (t/+ (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2) v1) v1))
 
     (and (offset? v1) (offset? v2))
     (offset
-      (+ (.-period ^clj v1) (.-period ^clj v2))
-      (+ (.-duration ^clj v1) (.-duration ^clj v2)))))
+      (+ (.-period ^{:tag #?(:cljs clj :clj Offset)} v1) (.-period ^{:tag #?(:cljs clj :clj Offset)} v2))
+      (+ (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2)))))
 
 (comment
   (t/+ (duration 5 :minutes) (offset (t/new-duration 25 :minutes)))
@@ -156,8 +176,8 @@
 (>defn subtract-offset*
   [d ^Offset offset]
   [time-type? offset? => time-type?]
-  (let [duration (.-duration #?(:cljs ^clj offset :clj offset))
-        period   (.-period #?(:cljs ^clj offset :clj offset))]
+  (let [duration (.-duration ^{:tag #?(:cljs clj :clj Offset)} offset)
+        period   (.-period ^{:tag #?(:cljs clj :clj Offset)} offset)]
     (cond-> d
       duration (t/- duration)
       period (t/- period))))
@@ -175,56 +195,40 @@
     (subtract-offset* v2 v1)
 
     (and (offset? v1) (period? v2))
-    (offset (t/- (.-period ^clj v1) v2) (.-duration ^clj v1))
+    (offset (t/- (.-period ^{:tag #?(:cljs clj :clj Offset)} v1) v2) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1))
 
     (and (period? v1) (offset? v2))
-    (offset (t/- (.-period ^clj v2) v1) (.-duration ^clj v2))
+    (offset (t/- (.-period ^{:tag #?(:cljs clj :clj Offset)} v2) v1) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2))
 
     (and (offset? v1) (duration? v2))
-    (offset (.-period ^clj v1) (t/- (.-duration ^clj v1) v2))
+    (offset (.-period ^{:tag #?(:cljs clj :clj Offset)} v1) (t/- (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1) v2))
 
     (and (duration? v1) (offset? v2))
-    (offset (.-period ^clj v2) (t/- (.-duration ^clj v2) v1))
+    (offset (.-period ^{:tag #?(:cljs clj :clj Offset)} v2) (t/- (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2) v1))
 
     (and (offset? v1) (offset? v2))
     (offset
-      (- (.-period ^clj v1) (.-period ^clj v2))
-      (- (.-duration ^clj v1) (.-duration ^clj v2)))))
-
-#?(:cljs
-   (deftype Offset [period duration]
-     IEquiv
-     (-equiv [this other]
-       (and
-         (= (type this) (type other))
-         (= (.-period this) (.-period ^clj other))
-         (= (.-duration this) (.-duration ^clj other))))
-     ITimeArithmetic
-     (+ [offset other] (add-offset offset other))
-     (- [offset other] (subtract-offset offset other)))
-   :clj
-   (deftype Offset [period duration]
-     Object
-     (equals [this other]
-       (and
-         (= (type this) (type other))
-         (= (.-period this) (.-period other))
-         (= (.-duration this) (.-duration other))))
-     ITimeArithmetic
-     (+ [offset other] (add-offset offset other))
-     (- [offset other] (subtract-offset offset other))))
+      (- (.-period ^{:tag #?(:cljs clj :clj Offset)} v1) (.-period ^{:tag #?(:cljs clj :clj Offset)} v2))
+      (- (.-duration ^{:tag #?(:cljs clj :clj Offset)} v1) (.-duration ^{:tag #?(:cljs clj :clj Offset)} v2)))))
 
 (extend-protocol ITimeArithmetic
   #?(:clj Object :cljs object)
   (+ [t d]
-    (if (offset? d)
+    (cond
+      (nil? d) t
+      (nil? t) d
+      (offset? d)
       (add-offset t d)
-      (.plus t d)))
+      :else
+      (.plus ^{:tag #?(:cljs clj :clj Object)} t d)))
   (- [t d]
-    (if (offset? d)
+    (cond
+      (nil? d) t
+      (nil? t) d
+      (offset? d)
       (subtract-offset t d)
-      (.minus t d))))
-
+      :else
+      (.minus ^{:tag #?(:cljs clj :clj Object)} t d))))
 
 #?(:clj
    (nippy/extend-freeze Offset :dv.tick-util/offset
@@ -1177,8 +1181,8 @@
   "Add thing without caring about type
   time-type? duration|period|offset => time-type?"
   [v1 v2]
-  [(s/or :time time-type? :offset offset-type?)
-   (s/or :time time-type? :offset offset-type?)
+  [(s/or :time time-type? :offset offset-type? :nil nil?)
+   (s/or :time time-type? :offset offset-type? :nil nil?)
    =>
    (s/or :date-time time-type? :offset offset-type?)]
   (cond
