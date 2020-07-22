@@ -752,7 +752,7 @@
   ([dow] (next-dow dow (t/today)))
   ([dow d]
    (let [dow* (day-of-week-with-offset (day-of-week-offsets dow) d)]
-     (t/+ d (t/new-period (- 7 dow*) :days)))))
+     (t/+ d (t/new-period (clojure.core/- 7 dow*) :days)))))
 
 (def next-sunday (partial next-dow t/SUNDAY))
 (def next-monday (partial next-dow t/MONDAY))
@@ -826,7 +826,7 @@
         first-day (start-of-year (t/year date))
         d1        (t/day-of-month first-day)
         d2        (day-of-week-sunday first-day)
-        d-offset  (- d1 (inc d2))
+        d-offset  (clojure.core/- d1 (inc d2))
         ;; Start at the first of the year and move back to prior sunday
         sunday    (t/+ (t/new-date (t/year date) 1 1)
                     (t/new-period d-offset :days))
@@ -935,7 +935,7 @@
   "Week number within this month for given date `d`, subtracts week of `d` and week-num of beginning of month."
   [d]
   (let [d (t/date d)]
-    (- (week-num d)
+    (clojure.core/- (week-num d)
       (-> (first-day-of-month d) week-num))))
 
 (comment
@@ -1173,17 +1173,26 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(>defn +
+(defn +
   "Add thing without caring about type
   time-type? duration|period|offset => time-type?"
   [v1 v2]
-  [(s/or :time time-type? :offset offset-type?)
-   (s/or :time time-type? :offset offset-type?)
+  #_[(s/or :time any? :offset any?)
+   (s/or :time any? :offset any?)
    =>
-   (s/or :date-time time-type? :offset offset-type?)]
+   (s/or :date-time any? :offset any?)]
+  (log/info "in tick-util/+ " (pr-str v1) " , " (pr-str v2))
+
+  (log/info "offset type v1? " )
+  (log/info "offset-type? " offset-type?)
+  (prn (offset-type? v1))
+
+  (log/info "offset type v2? " )
+  (prn (offset-type? v2))
   (cond
     (nil? v2) v1
     (nil? v1) v2
+
     (or
       (and (duration? v1) (period? v2))
       (and (period? v1) (duration? v2)))
@@ -1194,20 +1203,33 @@
     (t/+ v1 v2)
 
     (and (offset-type? v1) (time-type? v2))
-    (t/+ (->instant v2) v1)
+    (do
+      (log/info "in branch 1")
+      (t/+ (->instant v2) v1))
 
     (and (time-type? v1) (offset-type? v2))
-    (t/+ (->instant v1) v2)
+    (do
+      (log/info "in branch 2")
+      (t/+ (->instant v1) v2))
 
     :else
     (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
+
+
+(comment
+  (offset-type? #time/date "2020-07-21")
+  (time-type? #time/date "2020-07-21")
+  (+ #time/date "2020-07-21" #time/period "P1D" )
+  (t/+ (->instant #time/date "2020-07-21") #time/period "P1D" )
+  (+ #time/date "2020-07-21", #time/period "P1D")
+  )
 
 (>defn -
   "Subtract things without caring about type
   time-type? duration|period|offset => time-type?"
   [v1 v2]
-  [(s/or :time time-type? :offset offset-type?)
-   (s/or :time time-type? :offset offset-type?)
+  [(s/or :time time-type? :offset offset-type? :nil nil?)
+   (s/or :time time-type? :offset offset-type? :nil nil?)
    =>
    (s/or :date-time time-type? :offset offset-type?)]
   (cond
@@ -1456,13 +1478,15 @@
 
 (defn format-duration
   [du]
+  (log/info "Calling format duration: " du)
   (when du
     (let [seconds (t/seconds du)
           ;; todo do all minutes have 60 seconds? probably not
           minutes (Math/floor (/ seconds 60))
-          remain  (- seconds (* minutes 60))
+          remain  (clojure.core/- seconds (* minutes 60))
           secs    [remain (if (= 1 remain) "second" "seconds")]
           mins    [minutes (if (= 1 minutes) "minute" "minutes")]]
+      (log/info "returning from format-duration")
       (str/join " "
         (apply concat (remove #(zero? (first %)) [mins secs]))))))
 
