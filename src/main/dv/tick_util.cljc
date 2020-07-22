@@ -95,11 +95,10 @@
 
 (comment (time-type? (t/now)))
 
-(declare offset? offset + - add-offset subtract-offset)
+(declare offset + - add-offset subtract-offset offset-type?)
 
 (def date-type? (some-fn instant? date? date-time?))
 (def time-type? (some-fn instant? time? date? date-time?))
-(def offset-type? (some-fn offset? duration? period?))
 
 ;; Combines duration and period into one abstration
 ;; Todo I should lock down the semantics for this - the intention is that the duration is always less than 24 hours
@@ -127,6 +126,9 @@
      ITimeArithmetic
      (+ [offset other] (add-offset offset other))
      (- [offset other] (subtract-offset offset other))))
+
+(defn offset? [d] (instance? Offset d))
+(def offset-type? (some-fn offset? duration? period?))
 
 (>defn add-offset*
   [d ^Offset offset]
@@ -243,7 +245,6 @@
            duration (nippy/thaw-from-in! data-input)]
        (Offset. period duration))))
 
-(defn offset? [d] (instance? Offset d))
 
 (comment (offset? (->Offset (t/new-period 1 :days) (t/new-duration 1 :hours))))
 
@@ -311,7 +312,6 @@
   ([val units]
    [(s/or :int integer? :period period? :duration duration? :nil nil?)
     (s/or :units offset-units? :period period? :duration duration? :nil nil?) => offset?]
-   (log/info "0ffset: " val " units: " units)
    (cond
      (and (duration? val) (nil? units)) (->Offset units val)
      (and (period? val) (nil? units)) (->Offset val units)
@@ -756,7 +756,7 @@
   ([dow] (next-dow dow (t/today)))
   ([dow d]
    (let [dow* (day-of-week-with-offset (day-of-week-offsets dow) d)]
-     (t/+ d (t/new-period (- 7 dow*) :days)))))
+     (t/+ d (t/new-period (clojure.core/- 7 dow*) :days)))))
 
 (def next-sunday (partial next-dow t/SUNDAY))
 (def next-monday (partial next-dow t/MONDAY))
@@ -830,7 +830,7 @@
         first-day (start-of-year (t/year date))
         d1        (t/day-of-month first-day)
         d2        (day-of-week-sunday first-day)
-        d-offset  (- d1 (inc d2))
+        d-offset  (clojure.core/- d1 (inc d2))
         ;; Start at the first of the year and move back to prior sunday
         sunday    (t/+ (t/new-date (t/year date) 1 1)
                     (t/new-period d-offset :days))
@@ -939,7 +939,7 @@
   "Week number within this month for given date `d`, subtracts week of `d` and week-num of beginning of month."
   [d]
   (let [d (t/date d)]
-    (- (week-num d)
+    (clojure.core/- (week-num d)
       (-> (first-day-of-month d) week-num))))
 
 (comment
@@ -1177,7 +1177,7 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(>defn +
+(defn +
   "Add thing without caring about type
   time-type? duration|period|offset => time-type?"
   [v1 v2]
@@ -1188,10 +1188,12 @@
   (cond
     (nil? v2) v1
     (nil? v1) v2
+
     (or
       (and (duration? v1) (period? v2))
       (and (period? v1) (duration? v2)))
     (offset v1 v2)
+
     (or
       (and (duration? v1) (duration? v2))
       (and (period? v1) (period? v2)))
@@ -1206,12 +1208,20 @@
     :else
     (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
 
+(comment
+  (offset-type? #time/date "2020-07-21")
+  (time-type? #time/date "2020-07-21")
+  (+ #time/date "2020-07-21" #time/period "P1D" )
+  (t/+ (->instant #time/date "2020-07-21") #time/period "P1D" )
+  (+ #time/date "2020-07-21", #time/period "P1D")
+  )
+
 (>defn -
   "Subtract things without caring about type
   time-type? duration|period|offset => time-type?"
   [v1 v2]
-  [(s/or :time time-type? :offset offset-type?)
-   (s/or :time time-type? :offset offset-type?)
+  [(s/or :time time-type? :offset offset-type? :nil nil?)
+   (s/or :time time-type? :offset offset-type? :nil nil?)
    =>
    (s/or :date-time time-type? :offset offset-type?)]
   (cond
@@ -1460,13 +1470,15 @@
 
 (defn format-duration
   [du]
+  (log/info "Calling format duration: " du)
   (when du
     (let [seconds (t/seconds du)
           ;; todo do all minutes have 60 seconds? probably not
           minutes (Math/floor (/ seconds 60))
-          remain  (- seconds (* minutes 60))
+          remain  (clojure.core/- seconds (* minutes 60))
           secs    [remain (if (= 1 remain) "second" "seconds")]
           mins    [minutes (if (= 1 minutes) "minute" "minutes")]]
+      (log/info "returning from format-duration")
       (str/join " "
         (apply concat (remove #(zero? (first %)) [mins secs]))))))
 
