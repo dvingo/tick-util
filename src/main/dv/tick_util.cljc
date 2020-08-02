@@ -1496,7 +1496,7 @@
 
 (defn format-duration
   [du]
-  (log/info "Calling format duration: " du)
+  ;(log/info "Calling format duration: " du)
   (when du
     (let [seconds (t/seconds du)
           ;; todo do all minutes have 60 seconds? probably not
@@ -1504,7 +1504,7 @@
           remain  (clojure.core/- seconds (* minutes 60))
           secs    [remain (if (= 1 remain) "second" "seconds")]
           mins    [minutes (if (= 1 minutes) "minute" "minutes")]]
-      (log/info "returning from format-duration")
+      ;(log/info "returning from format-duration")
       (str/join " "
         (apply concat (remove #(zero? (first %)) [mins secs]))))))
 
