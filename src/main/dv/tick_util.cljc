@@ -1571,8 +1571,8 @@
     (do
       (log/info "offset " x)
       (str
-        (when (:period x) (str (format-period (:period x)) " "))
-        (when (:duration x) (format-duration (:duration x)))))
+        (when (-period x) (str (format-period (-period x)) " "))
+        (when (-duration x) (format-duration (-duration x)))))
     (period? x) (format-period x)
     (duration? x) (format-duration x)))
 
@@ -1580,6 +1580,7 @@
 ;  (let [p (t/between d (t/today))])
 ;  )
 (comment
+  (format-offset (offset 1 :days 2 :minutes))
   (offset? (offset 1 :days))
   (type (offset 1 :days))
   (format-period (t/new-period 3 :days))
