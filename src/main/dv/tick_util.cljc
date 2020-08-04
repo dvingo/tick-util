@@ -1211,6 +1211,9 @@
     (and (offset-type? v1) (time-type? v2))
     (t/+ (->instant v2) v1)
 
+    (and (time-type? v1) (offset-type? v2))
+    (t/+ (->instant v1) v2)
+
     (and (time-type? v1) (offset-type? v2)) (t/+ (->instant v1) v2)
 
     (and (period? v1) (offset? v2)) (offset (+ (-period v2) v1) (-duration v2))
@@ -1225,6 +1228,8 @@
     (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
 
 (comment
+  (+ (t/now) (offset 1 :hours))
+  (t/now)
   (offset-type? #time/date "2020-07-21")
   (time-type? #time/date "2020-07-21")
   (+ #time/date "2020-07-21" #time/period "P1D")
