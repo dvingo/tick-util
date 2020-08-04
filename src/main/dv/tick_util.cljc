@@ -127,8 +127,13 @@
      (+ [offset other] (add-offset offset other))
      (- [offset other] (subtract-offset offset other))))
 
-(defn- -period [offset] (.-period ^{:tag #?(:cljs clj :clj Offset)} offset))
-(defn- -duration [offset] (.-duration ^{:tag #?(:cljs clj :clj Offset)} offset))
+;; If using Offset in clj instead of Object I would get the following error in certain use cases at the repl:
+;; Error printing return value (ClassCastException) at dv.tick-util/-duration (tick_util.cljc:131).
+;; class dv.tick_util.Offset cannot be cast to class dv.tick_util.Offset
+;; (dv.tick_util.Offset is in unnamed module of loader clojure.lang.DynamicClassLoader @62b15496
+
+(defn- -period [offset] (.-period ^{:tag #?(:cljs clj :clj Object)} offset))
+(defn- -duration [offset] (.-duration ^{:tag #?(:cljs clj :clj Object)} offset))
 
 (defn offset? [d] (instance? Offset d))
 (def offset-type? (some-fn offset? duration? period?))
@@ -1042,13 +1047,14 @@
 
 ;; period prints first then duration
 (defn print-offset [^Offset o]
-  (let [duration (.-duration o)
-        period   (.-period o)]
+  (let [duration (-duration o)
+        period   (-period o)]
     (str "#time/offset \"" (if period period "nil") " " (if duration duration "nil") "\"")))
 
 (comment
   (pr-str (offset (t/new-duration 1 :hours) (t/new-period 2 :days)))
   (offset (t/new-period 2 :days))
+  (-period (offset (t/new-period 2 :days)))
   (offset (t/new-duration 2 :minutes))
   )
 
@@ -1292,8 +1298,8 @@
   (- (t/now) (t/new-duration 25 :minutes))
   (- (t/now) (t/new-period 25 :days))
   (- (offset (t/new-duration 25 :minutes)) (period 2 :weeks))
-  (-  (period 2 :weeks) (offset (t/new-duration 25 :minutes)))
-  (-  (period 2 :weeks) (offset (t/new-period 1 :days) (t/new-duration 25 :minutes)))
+  (- (period 2 :weeks) (offset (t/new-duration 25 :minutes)))
+  (- (period 2 :weeks) (offset (t/new-period 1 :days) (t/new-duration 25 :minutes)))
 
   (reduce t/+ (t/new-duration 0 :seconds) ())
   (t/+ (today->instant) (t/new-duration 20 :minutes))
