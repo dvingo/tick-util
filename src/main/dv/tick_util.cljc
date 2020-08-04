@@ -1553,10 +1553,11 @@
         first))
     ""))
 
-(>defn offset-from-date
+;; todo this is breaking for some reason in cljs with shadow cljs
+(defn offset-from-date
   "Returns a date-time by adding the given offset to the provided ref-date."
   [ref-date offset]
-  [date? offset? => date-time?]
+  #_[date? offset? => date-time?]
   (let [period   (:period offset)
         duration (:duration offset)]
     (cond-> (->date-time ref-date)
