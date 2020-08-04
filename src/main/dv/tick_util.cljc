@@ -1105,17 +1105,17 @@
   (offset (t/new-duration 1 :hours) (t/new-period 2 :days))
   (offset (t/new-period 2 :days))
   ;(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} #time/offset "#time/duration\"PT1H\" #time/period\"P2D\"" )
-  ;(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-duration 1 :hours))))
-  ;(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-duration 1 :hours) (t/new-period 2 :days))))
-  ;(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-period 2 :days))))
+  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-duration 1 :hours))))
+  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-duration 1 :hours) (t/new-period 2 :days))))
+  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-period 2 :days))))
   (offset (t/new-duration 1 :hours))
   (pr-str (t/new-duration 1 :hours)))
 
 (def tick-transit-reader
   {transit-tag
    #?(:cljs (fn [v] (cljs.reader/read-string v))
-      ;:clj (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} %))
-      :clj (tr/read-handler #(clojure.edn/read-string {:readers rw/tags} %))
+      :clj (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} %))
+      ;:clj (tr/read-handler #(clojure.edn/read-string {:readers rw/tags} %))
       )})
 
 #?(:clj (defn write-tr [data]
@@ -1572,7 +1572,7 @@
   (cond
     (offset? x)
     (do
-      (log/info "offset " x)
+      ;(log/info "offset " x)
       (str
         (when (-period x) (str (format-period (-period x)) " "))
         (when (-duration x) (format-duration (-duration x)))))
