@@ -1346,9 +1346,13 @@
      (t/format (t/formatter fmt) (->date-time d))
      "")))
 
+(comment
+  (t/in (t/now) "Europe/Paris")
+  )
+
 (>defn format-w-time
   [d]
-  [date-time? => string?]
+  [(s/or :dt date-time? :i inst?) => string?]
   (t/format (t/formatter default-format-w-time) (->date-time d)))
 
 (>defn format-time
