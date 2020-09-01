@@ -1090,18 +1090,24 @@
         [Date DateTime Time Period Duration Instant Offset]
         (repeat tick-transit-write-handler)))))
 
+;;
+;; (2020-09-01) I'm not sure why but you have to return the code as data instead of being evaluated at read time.
+;; This was figured out by looking at the code for the time-literals library.
+;;
 (defn read-offset
   "Period is printed first then duration."
   [offset-str]
-  (let [[period duration] (str/split offset-str #" ")
-        period*   (if (= "nil" period) nil (. Period parse period))
-        duration* (if (= "nil" duration) nil (. Duration parse duration))]
-    (->Offset period* duration*)))
+  (let [[period duration] (str/split offset-str #" ")]
+    `(let [period#   (if (= "nil" ~period) nil (. java.time.Period ~'parse ~period))
+           duration# (if (= "nil" ~duration) nil (. java.time.Duration ~'parse ~duration))]
+       (->Offset period# duration#))))
 
 #?(:cljs (cljs.reader/register-tag-parser! 'time/offset read-offset))
 
 (comment
   (. Period parse "nil")
+  (-duration #time/offset"nil PT1H")
+  #time/offset"nil PT1H"
   (offset (t/new-duration 1 :hours) (t/new-period 2 :days))
   (offset (t/new-period 2 :days))
   ;(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} #time/offset "#time/duration\"PT1H\" #time/period\"P2D\"" )
@@ -1644,4 +1650,10 @@
 
 (comment
   (t/time (->instant (t/inst)))
+  )
+
+
+(comment
+  #time/offset"P1D nil"
+  #time/period"P1D",
   )
