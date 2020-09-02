@@ -1,1 +1,1 @@
-{time/offset dv.tick-util/read-offset}
+{time/offset dv.tick-util/read-offset-edn}

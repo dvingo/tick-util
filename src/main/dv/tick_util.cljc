@@ -1094,7 +1094,7 @@
 ;; (2020-09-01) I'm not sure why but you have to return the code as data instead of being evaluated at read time.
 ;; This was figured out by looking at the code for the time-literals library.
 ;;
-(defn read-offset
+(defn read-offset-edn
   "Period is printed first then duration."
   [offset-str]
   (let [[period duration] (str/split offset-str #" ")]
@@ -1102,7 +1102,16 @@
            duration# (if (= "nil" ~duration) nil (. java.time.Duration ~'parse ~duration))]
        (->Offset period# duration#))))
 
-#?(:cljs (cljs.reader/register-tag-parser! 'time/offset read-offset))
+#?(:cljs (cljs.reader/register-tag-parser! 'time/offset read-offset-edn))
+
+(defn read-offset-transit
+  "Period is printed first then duration."
+  [offset-str]
+  (let [offset-str (str/replace (str/replace offset-str "#time/offset " "") "\"" "")
+        [period duration] (str/split offset-str #" ")
+        period*    (if (= "nil" period) nil (. java.time.Period parse period))
+        duration*  (if (= "nil" duration) nil (. java.time.Duration parse duration))]
+    (->Offset period* duration*)))
 
 (comment
   (. Period parse "nil")
@@ -1119,8 +1128,11 @@
 
 (def tick-transit-reader
   {transit-tag
-   #?(:cljs (fn [v] (cljs.reader/read-string v))
-      :clj (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} %))
+   #?(:cljs (fn [v]
+              (if (str/starts-with? v "#time/offset ")
+                (read-offset-transit v)
+                (cljs.reader/read-string v)))
+      :clj (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset-transit)} %))
       ;:clj (tr/read-handler #(clojure.edn/read-string {:readers rw/tags} %))
       )})
 
@@ -1172,11 +1184,9 @@
 
 ;; cljs
 (comment
-
   "{\"~:task/scheduled-at\":{\"~#time/tick\":\"#time/offset \"P0D PT9H\"\"}}"
-
   (clojure.edn/read-string "[\"hello world\"]")
-  (def date-reader (tr/reader :json {:handlers {transit-tag #(cljs.reader/read-string %)}}))
+  (def date-reader (tr/reader :json {:handlers tick-transit-reader}))
   (def date-writer (tr/writer :json {:handlers tick-transit-writer-handler-map}))
   (tr/read date-reader (tr/write date-writer (t/today)))
   (tr/read date-reader (tr/write date-writer (offset 1 :hours 2 :minutes)))
