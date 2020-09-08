@@ -714,6 +714,8 @@
 
 (def prior-month (partial prior :months identity))
 (def prior-week (partial prior :weeks identity))
+(def prior-day (partial prior :days identity))
+(def yesterday prior-day)
 
 (defn subsequent
   ([units extract] (subsequent units extract (today-dt)))
@@ -1526,6 +1528,38 @@
   (.plusDays (period 1 :days) 20)
   )
 
+;; I believe this is broken when d1 is after d2. You get a negative offset which is fine,
+;; but I need to verify that the math works out.
+(defn between
+  "Returns a tick.util/Offset for the given {date, date-time, or time} objects"
+  [d1 d2]
+  (let [d1 (if (time? d1) d1 (->date-time d1))
+        d2 (if (time? d2) d2 (->date-time d2))
+        both-time? (and (time? d1) (time? d2))]
+    (when-not
+      (or
+        both-time?
+        (and (date-time? d1) (date-time? d2)))
+      (throw (error "You must pass the same time types (date, date-time, or time) to 'between'.")))
+    ;; on cljs java.time lib doesn't work for 'between' of two time objects using; duration gets around that.
+    (let [duration1 (if both-time? (t/duration {:tick/beginning d1 :tick/end d2}) (t/between d1 d2))
+          num-days  (t/days duration1)
+          period*   (if (zero? num-days) nil (t/new-period num-days :days))
+          duration* (t/- duration1 (t/new-duration num-days :days))
+          duration* (if (zero? (t/seconds duration*)) nil duration*)]
+      (->Offset period* duration*))))
+
+(comment
+  (between (+ (yesterday) (duration 24 :minutes 30 :seconds)) (t/now))
+  ;; should throw b/c different types
+  (between (+ (yesterday) (duration 24 :minutes 30 :seconds)) (t/time (t/now)))
+  (between (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) (t/time (t/now)))
+  (t/duration {:tick/beginning (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) :tick/end (t/time (t/now))})
+  (between (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) (t/time (t/now)))
+  (t/between (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) (t/time (t/now)))
+  (between (prior-month) (+ (yesterday) (duration 24 :minutes 30 :seconds)))
+  (between (->date (prior-month)) (+ (yesterday) (duration 24 :minutes 30 :seconds)))
+  )
 
 (defn format-duration
   [du]
