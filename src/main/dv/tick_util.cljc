@@ -97,8 +97,9 @@
 
 (declare offset + - add-offset subtract-offset offset-type? -period -duration)
 
-(def date-type? (some-fn instant? date? date-time?))
-(def time-type? (some-fn instant? time? date? date-time?))
+(def date-type? (some-fn inst? instant? date? date-time?))
+(def time-type? (some-fn inst? instant? time? date? date-time?))
+
 
 ;; Combines duration and period into one abstration
 ;; Todo I should lock down the semantics for this - the intention is that the duration is always less than 24 hours
@@ -1245,7 +1246,7 @@
     ;;todo i should add support for & args by using reduce to call + again 2 args at a time.
 
     :else
-    (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
+    (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " vals: " (pr-str v1) ", " (pr-str v2)))))
 
 (comment
   (+ (t/now) (offset 1 :hours))
@@ -1554,7 +1555,10 @@
   ;; should throw b/c different types
   (between (+ (yesterday) (duration 24 :minutes 30 :seconds)) (t/time (t/now)))
   (between (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) (t/time (t/now)))
-  (t/duration {:tick/beginning (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) :tick/end (t/time (t/now))})
+
+  (t/truncate (+ (t/date) #time/offset "nil PT20H40M0.005S" ) :seconds)
+  (t/truncate (t/duration {:tick/beginning (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) :tick/end (t/time (t/now))})
+    :seconds)
   (between (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) (t/time (t/now)))
   (t/between (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) (t/time (t/now)))
   (between (prior-month) (+ (yesterday) (duration 24 :minutes 30 :seconds)))
