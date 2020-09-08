@@ -1207,8 +1207,76 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+(defn rest-minutes
+  "take a duration remove the hours and get mins remaining"
+  [duration]
+  (t/minutes
+    (t/- duration
+      (t/new-duration (t/hours duration) :hours))))
+
+;; this may be unintuitive b/c units add for more precise with this setup
+;;
+;; todo, could give back a map with successive larger values removed
+;; in the form that's intuitive => the sum of the map is the total duration time
+;; this would be mins:
+;(t/minutes (t/- duration
+;             (t/new-duration (t/hours duration) :hours)))
+
+
+(defn duration->map
+  [d]
+  {:nanos   (t/nanos d)
+   :micros  (t/micros d)
+   :millis  (t/millis d)
+   :seconds (t/seconds d)
+   :minutes (t/minutes d)
+   :hours   (t/hours d)})
+
+(def duration-unit-keys [:hours :minutes :seconds :millis :micros :nanos])
+
+(def plus-duration-fns
+  {:nanos   (fn [d v] (.plusNanos #?(:cljs ^js d :clj d) v))
+   ;; there is no plusMicros in java.time.Duration
+   :micros  (fn [d v] (.plusNanos #?(:cljs ^js d :clj d) (* 1000 v)))
+   :millis  (fn [d v] (.plusMillis #?(:cljs ^js d :clj d) v))
+   :seconds (fn [d v] (.plusSeconds #?(:cljs ^js d :clj d) v))
+   :minutes (fn [d v] (.plusMinutes #?(:cljs ^js d :clj d) v))
+   :hours   (fn [d v] (.plusHours #?(:cljs ^js d :clj d) v))})
+
+(comment (duration->map (t/new-duration 1 :minutes)))
+
+;;
+;; todo update to accept singular units minute hour second etc
+;; mainly for 1 (duration 1 :hour 2 :minutes)
+;;
+(>defn duration
+  [num units & args]
+  [int? duration-units? (s/* (s/cat :n int? :v duration-units?)) => duration?]
+  (reduce (fn [acc [val units]]
+            (if-let [f (get plus-duration-fns units)]
+              (f acc val)
+              (throw (error "Unknown units passed to duration: " units))))
+    (t/new-duration num units)
+    (partition 2 args)))
+
+(comment
+  (duration 1 :hours 2 :minutes 100 :seconds)
+  (duration -1 :hours 2 :minutes 100 :nanos)
+  (t/new-duration -5 :minutes)
+  (.plusMinutes (t/new-duration 1 :hours) 20)
+  )
+
+(defn time->duration
+  "Given a time object return a duration."
+  [t]
+  (duration (t/hour t) :hours (t/minute t) :minutes (t/second t) :seconds))
+
+(comment (time->duration #time/time "13:34"))
+
 (defn +
   "Add thing without caring about type
+  any combination of:
   time-type? duration|period|offset => time-type?"
   [v1 v2]
   [(s/or :time time-type? :offset offset-type? :nil nil?)
@@ -1243,13 +1311,33 @@
     (and (offset? v1) (duration? v2)) (offset (-period v1) (+ (-duration v1) v2))
     (and (duration? v1) (offset? v2)) (offset (-period v2) (+ (-duration v2) v1))
 
+    (and (time? v1) (date? v2)) (t/at v2 v1)
+    (and (date? v1) (time? v2)) (t/at v1 v2)
+
+    (and (time? v1) (time? v2)) (t/+ v1 (time->duration v2))
+
+    (and (time? v1) (date-time? v2)) (t/at (t/date v2) (t/+ v1 (time->duration (t/time v2))))
+    (and (date-time? v1) (time? v2)) (t/at (t/date v1) (t/+ v2 (time->duration (t/time v1))))
+
     ;;todo i should add support for & args by using reduce to call + again 2 args at a time.
 
     :else
-    (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " vals: " (pr-str v1) ", " (pr-str v2)))))
+    (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " \nvals: " (pr-str v1) ", " (pr-str v2)))))
 
 (comment
+  (+ #time/time "04:00" #time/time "05:02")
+
+  (let [t (t/time "13:03")]
+    (duration (t/hour t) :hours (t/minute t) :minutes (t/second t) :seconds))
+  (t/duration (t/time "13:00"))
+  (t/hour (t/time "13:00"))
+  (t/+ (t/time "12:00") (t/new-duration 5 :minutes))
+  (t/+ #time/time "03:14" (t/date-time))
+  (+ #time/time "03:14" (t/date-time))
+  (t/time (t/date-time))
   (+ (t/now) (offset 1 :hours))
+  (+ #time/date "2020-09-11" #time/time "03:14")
+
   (t/now)
   (offset-type? #time/date "2020-07-21")
   (time-type? #time/date "2020-07-21")
@@ -1455,64 +1543,6 @@
   (defn years [v] (core/years v))
   )
 
-(defn rest-minutes
-  "take a duration remove the hours and get mins remaining"
-  [duration]
-  (t/minutes
-    (t/- duration
-      (t/new-duration (t/hours duration) :hours))))
-
-;; this may be unintuitive b/c units add for more precise with this setup
-;;
-;; todo, could give back a map with successive larger values removed
-;; in the form that's intuitive => the sum of the map is the total duration time
-;; this would be mins:
-;(t/minutes (t/- duration
-;             (t/new-duration (t/hours duration) :hours)))
-
-
-(defn duration->map
-  [d]
-  {:nanos   (t/nanos d)
-   :micros  (t/micros d)
-   :millis  (t/millis d)
-   :seconds (t/seconds d)
-   :minutes (t/minutes d)
-   :hours   (t/hours d)})
-
-(def duration-unit-keys [:hours :minutes :seconds :millis :micros :nanos])
-
-(def plus-duration-fns
-  {:nanos   (fn [d v] (.plusNanos #?(:cljs ^js d :clj d) v))
-   ;; there is no plusMicros in java.time.Duration
-   :micros  (fn [d v] (.plusNanos #?(:cljs ^js d :clj d) (* 1000 v)))
-   :millis  (fn [d v] (.plusMillis #?(:cljs ^js d :clj d) v))
-   :seconds (fn [d v] (.plusSeconds #?(:cljs ^js d :clj d) v))
-   :minutes (fn [d v] (.plusMinutes #?(:cljs ^js d :clj d) v))
-   :hours   (fn [d v] (.plusHours #?(:cljs ^js d :clj d) v))})
-
-(comment (duration->map (t/new-duration 1 :minutes)))
-
-;;
-;; todo update to accept singular units minute hour second etc
-;; mainly for 1 (duration 1 :hour 2 :minutes)
-;;
-(>defn duration
-  [num units & args]
-  [int? duration-units? (s/* (s/cat :n int? :v duration-units?)) => duration?]
-  (reduce (fn [acc [val units]]
-            (if-let [f (get plus-duration-fns units)]
-              (f acc val)
-              (throw (error "Unknown units passed to duration: " units))))
-    (t/new-duration num units)
-    (partition 2 args)))
-
-(comment
-  (duration -1 :hours 2 :minutes 100 :nanos)
-  (t/new-duration -5 :minutes)
-  (.plusMinutes (t/new-duration 1 :hours) 20)
-  )
-
 (>defn period
   [num units & args]
   [int? period-units? (s/* (s/cat :n int? :v period-units?)) => period?]
@@ -1534,8 +1564,8 @@
 (defn between
   "Returns a tick.util/Offset for the given {date, date-time, or time} objects"
   [d1 d2]
-  (let [d1 (if (time? d1) d1 (->date-time d1))
-        d2 (if (time? d2) d2 (->date-time d2))
+  (let [d1         (if (time? d1) d1 (->date-time d1))
+        d2         (if (time? d2) d2 (->date-time d2))
         both-time? (and (time? d1) (time? d2))]
     (when-not
       (or
@@ -1556,7 +1586,7 @@
   (between (+ (yesterday) (duration 24 :minutes 30 :seconds)) (t/time (t/now)))
   (between (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) (t/time (t/now)))
 
-  (t/truncate (+ (t/date) #time/offset "nil PT20H40M0.005S" ) :seconds)
+  (t/truncate (+ (t/date) #time/offset "nil PT20H40M0.005S") :seconds)
   (t/truncate (t/duration {:tick/beginning (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) :tick/end (t/time (t/now))})
     :seconds)
   (between (t/time (+ (yesterday) (duration 24 :minutes 30 :seconds))) (t/time (t/now)))
