@@ -133,8 +133,8 @@
 ;; class dv.tick_util.Offset cannot be cast to class dv.tick_util.Offset
 ;; (dv.tick_util.Offset is in unnamed module of loader clojure.lang.DynamicClassLoader @62b15496
 
-(defn- -period [offset] (.-period ^{:tag #?(:cljs clj :clj Object)} offset))
-(defn- -duration [offset] (.-duration ^{:tag #?(:cljs clj :clj Object)} offset))
+(defn -period [offset] (.-period ^{:tag #?(:cljs clj :clj Object)} offset))
+(defn -duration [offset] (.-duration ^{:tag #?(:cljs clj :clj Object)} offset))
 
 (defn offset? [d] (instance? Offset d))
 (def offset-type? (some-fn offset? duration? period?))
