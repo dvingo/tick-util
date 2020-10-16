@@ -1207,13 +1207,29 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 (defn rest-minutes
   "take a duration remove the hours and get mins remaining"
   [duration]
   (t/minutes
     (t/- duration
       (t/new-duration (t/hours duration) :hours))))
+
+(defn duration->hrs-mins-secs
+  [duration]
+  (let [hours   (t/hours duration)
+        minutes (t/minutes (t/- duration
+                             (t/new-duration hours :hours)))
+        seconds (t/seconds (t/- duration
+                             (t/new-duration minutes :minutes)
+                             (t/new-duration hours :hours)))]
+
+    [hours minutes seconds]))
+
+(comment
+  (duration->hrs-mins-secs (duration 1 :hours 10 :minutes 5 :seconds))
+  (duration 1 :hours 10 :minutes 5 :seconds)
+  )
+
 
 ;; this may be unintuitive b/c units add for more precise with this setup
 ;;
@@ -1597,17 +1613,15 @@
 
 (defn format-duration
   [du]
-  ;(log/info "Calling format duration: " du)
   (when du
-    (let [seconds (t/seconds du)
-          ;; todo do all minutes have 60 seconds? probably not
-          minutes (Math/floor (/ seconds 60))
-          remain  (clojure.core/- seconds (* minutes 60))
-          secs    [remain (if (= 1 remain) "second" "seconds")]
-          mins    [minutes (if (= 1 minutes) "minute" "minutes")]]
-      ;(log/info "returning from format-duration")
-      (str/join " "
-        (apply concat (remove #(zero? (first %)) [mins secs]))))))
+    (let [[hours minutes seconds]
+          (duration->hrs-mins-secs du)]
+      (let [hrs  [hours (if (= 1 hours) "hour" "hours")]
+            secs [seconds (if (= 1 seconds) "second" "seconds")]
+            mins [minutes (if (= 1 minutes) "minute" "minutes")]]
+        (str/join " "
+          (apply concat
+            (remove #(zero? (first %)) [hrs mins secs])))))))
 
 (comment
   (apply concat (remove #(zero? (first %)) [[0 "minutes"] [10 "seconds"]]))
