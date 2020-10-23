@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dv</groupId>
   <artifactId>tick-util</artifactId>
-  <version>2030.0.0</version>
+  <version>2030.0.2</version>
   <name>tick-utils</name>
   <description>Utils for juxt/tick</description>
   <url>https://github.com/dvingo/tick-util</url>
@@ -29,11 +29,6 @@
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
       <version>1.10.1</version>
-    </dependency>
-    <dependency>
-      <groupId>thheller</groupId>
-      <artifactId>shadow-cljsjs</artifactId>
-      <version>0.0.21</version>
     </dependency>
     <dependency>
       <groupId>com.fulcrologic</groupId>
