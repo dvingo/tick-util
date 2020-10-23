@@ -1009,6 +1009,7 @@
         (into acc (map #(vector % intvl)) dates)))
     {}
     intvls))
+
 (comment (make-dates-to-intvls
            ;; see date-gen ns
            (make-week-intervals (first-day-of-month))))
@@ -1229,6 +1230,17 @@
   (duration->hrs-mins-secs (duration 1 :hours 10 :minutes 5 :seconds))
   (duration 1 :hours 10 :minutes 5 :seconds)
   )
+
+(defn offset->time
+  "Takes an offset and returns the time version of the duration.
+  example: (offset (period 1 :days) (duration 9 :hours 10 :minutes))
+  -> #time/time 09:10"
+  [offset]
+  (let [[hr mins] (duration->hrs-mins-secs (-duration offset))]
+    (t/new-time hr mins)))
+
+(comment
+  (offset->time (offset (period 1 :days) (duration 9 :hours 10 :minutes))))
 
 
 ;; this may be unintuitive b/c units add for more precise with this setup
