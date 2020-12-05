@@ -1334,6 +1334,12 @@
     (and (offset-type? v1) (time-type? v2))
     (t/+ (->instant v2) v1)
 
+    (and (or (date? v1) (date-time? v1)) (offset-type? v2))
+    (t/+ v1 v2)
+
+    (and (or (date? v2) (date-time? v2)) (offset-type? v1))
+    (t/+ v2 v1)
+
     (and (time-type? v1) (offset-type? v2))
     (t/+ (->instant v1) v2)
 
@@ -1405,6 +1411,12 @@
     (and (offset-type? v1) (time-type? v2))
     (t/- (->instant v2) v1)
 
+    (and (or (date? v1) (date-time? v1)) (offset-type? v2))
+    (t/- v1 v2)
+
+    (and (or (date? v2) (date-time? v2)) (offset-type? v1))
+    (t/- v2 v1)
+
     (and (time-type? v1) (offset-type? v2))
     (t/- (->instant v1) v2)
 
@@ -1423,6 +1435,7 @@
 
 (comment
   (+ (duration 10 :minutes) (duration 10 :hours))
+  (+ (today) (period 1 :years))
   (+ (period 1 :days) (duration 10 :hours))
   (+ (duration 10 :hours) (period 1 :days))
   (+ (period 1 :days) (period 10 :days))
@@ -1436,6 +1449,7 @@
 
   (- (duration 10 :minutes) (duration 10 :hours))
   (- (period 1 :days) (duration 10 :hours))
+  (- (today) (period 1 :years))
   (- (duration 10 :hours) (period 1 :days))
   (- (period 1 :days) (period 10 :days))
   (- (period 10 :days) (period 1 :days))
@@ -1762,8 +1776,12 @@
   (t/time (->instant (t/inst)))
   )
 
-
 (comment
   #time/offset"P1D nil"
   #time/period"P1D",
+
+  (period 1 :months 2 :days)
+  (+ (today) (period 1 :years))
   )
+
+
