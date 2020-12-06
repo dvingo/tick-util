@@ -154,6 +154,16 @@
       duration (t/+ duration)
       period (t/+ period))))
 
+(comment
+  (-duration (offset 2 :days 5 :minutes ))
+  (t/+ (t/date-time) #time/duration "PT5M")
+  (t/+
+    (t/date)
+    (-duration (offset 2 :days 5 :minutes)))
+  (add-offset*
+    (t/date) (offset 2 :days 5 :minutes )))
+
+
 (>defn add-offset
   [v1 v2]
   [(s/or :time time-type? :offset offset-type?)
@@ -185,7 +195,9 @@
       (+ (-period v1) (-period v2))
       (+ (-duration v1) (-duration v2)))))
 
+
 (comment
+  (add-offset (t/date) (offset 2 :days 5 :minutes))
   (t/+ (duration 5 :minutes) (offset (t/new-duration 25 :minutes)))
   (t/+ (t/now) (offset (t/new-duration 25 :minutes)))
   (t/+ (t/now) (t/new-duration 25 :minutes)))
@@ -1334,10 +1346,16 @@
     (and (offset-type? v1) (time-type? v2))
     (t/+ (->instant v2) v1)
 
-    (and (or (date? v1) (date-time? v1)) (offset-type? v2))
+    (and (date? v1) (offset-type? v2))
+    (t/+ (->date-time v1) v2)
+
+    (and (date-time? v1) (offset-type? v2))
     (t/+ v1 v2)
 
-    (and (or (date? v2) (date-time? v2)) (offset-type? v1))
+    (and (date? v2) (date-time? v2) (offset-type? v1))
+    (t/+ (->date-time v2) v1)
+
+    (and (date-time? v2) (offset-type? v1))
     (t/+ v2 v1)
 
     (and (time-type? v1) (offset-type? v2))
@@ -1370,6 +1388,8 @@
   (let [t (t/time "13:03")]
     (duration (t/hour t) :hours (t/minute t) :minutes (t/second t) :seconds))
   (t/duration (t/time "13:00"))
+  (+ (t/date) (offset 5 :days 2 :hours))
+  (t/+ (t/date) (offset 5 :days 2 :hours))
   (t/hour (t/time "13:00"))
   (t/+ (t/time "12:00") (t/new-duration 5 :minutes))
   (t/+ #time/time "03:14" (t/date-time))
@@ -1411,10 +1431,16 @@
     (and (offset-type? v1) (time-type? v2))
     (t/- (->instant v2) v1)
 
-    (and (or (date? v1) (date-time? v1)) (offset-type? v2))
+    (and (date? v1) (offset-type? v2))
+    (t/- (->date-time v1) v2)
+
+    (and (date-time? v1) (offset-type? v2))
     (t/- v1 v2)
 
-    (and (or (date? v2) (date-time? v2)) (offset-type? v1))
+    (and (date? v2) (offset-type? v1))
+    (t/- (->date-time v2) v1)
+
+    (and (date-time? v2) (offset-type? v1))
     (t/- v2 v1)
 
     (and (time-type? v1) (offset-type? v2))
@@ -1436,6 +1462,8 @@
 (comment
   (+ (duration 10 :minutes) (duration 10 :hours))
   (+ (today) (period 1 :years))
+  (+ (today) (offset (period 1 :years) (duration 5 :minutes)))
+  (+ (t/inst) (offset (period 1 :years) (duration 5 :minutes)))
   (+ (period 1 :days) (duration 10 :hours))
   (+ (duration 10 :hours) (period 1 :days))
   (+ (period 1 :days) (period 10 :days))
