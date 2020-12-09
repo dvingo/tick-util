@@ -1774,6 +1774,7 @@
   (to-int "-10") (to-int "-0"))
 
 (>defn pos-or-empty
+  "Return a number if it is positive or the empty string if i is emptry string."
   [i]
   [(s/or :s string? :n number?) => ::str-or-num]
   (if (and (string? i) (empty? i))
@@ -1785,8 +1786,7 @@
   [s]
   (let [i (pos-or-empty s)
         i (cond (string? i) ""
-                (zero? i) 1
-                :elsee i)]
+                :else i)]
     (cond-> i (number? i)
       (t/new-period :days))))
 
@@ -1796,7 +1796,7 @@
   (let [i (pos-or-empty s)
         i (cond (string? i) ""
                 (zero? i) 1
-                :elsee i)]
+                :else i)]
     (cond-> i (number? i)
       (t/new-duration :hours))))
 
