@@ -38,7 +38,7 @@
 
 (defn error [& msg]
   #?(:cljs (js/Error. (apply str msg))
-     :clj  (RuntimeException. (apply str msg))))
+     :clj (RuntimeException. (apply str msg))))
 
 (defn throw* [& args]
   (throw (apply error args)))
@@ -155,13 +155,13 @@
       period (t/+ period))))
 
 (comment
-  (-duration (offset 2 :days 5 :minutes ))
+  (-duration (offset 2 :days 5 :minutes))
   (t/+ (t/date-time) #time/duration "PT5M")
   (t/+
     (t/date)
     (-duration (offset 2 :days 5 :minutes)))
   (add-offset*
-    (t/date) (offset 2 :days 5 :minutes )))
+    (t/date) (offset 2 :days 5 :minutes)))
 
 
 (>defn add-offset
@@ -957,7 +957,7 @@
   (week-num (t/new-date 2021 1 3))
   (week-num (t/new-date 2021 1 4))
   (week-num (t/new-date 2020 2 1))
-  (week-num (t/new-date 2022 1 1))                          ;saturday
+  (week-num (t/new-date 2022 1 1)) ;saturday
   (week-num (t/new-date 2022 1 2))
   (week-num (t/new-date 2022 1 3))
   (week-num (t/new-date 2023 1 1))
@@ -1005,8 +1005,8 @@
   (week-index (t/date "2020-01-01"))
   (week-index (t/date "2020-01-05"))
   ;(week-index (js/Date.))
-  (week-index (t/date "2020-02-01"))                        ; should be 0
-  (week-index (t/date "2020-02-02"))                        ; should be 1
+  (week-index (t/date "2020-02-01")) ; should be 0
+  (week-index (t/date "2020-02-02")) ; should be 1
   (week-index (t/date "2020-02-09"))
   (week-num (first-day-of-month (t/date "2020-02-01")))
   (week (t/inst)))
@@ -1098,9 +1098,9 @@
 
 (def tick-transit-write-handler
   #?(:cljs (TickHandler.)
-     :clj  (tr/write-handler
-             transit-tag
-             (fn [v] (pr-str v)))))
+     :clj (tr/write-handler
+            transit-tag
+            (fn [v] (pr-str v)))))
 
 (def tick-transit-writer-handler-map
   (reduce
@@ -1154,7 +1154,7 @@
               (if (str/starts-with? v "#time/offset ")
                 (read-offset-transit v)
                 (cljs.reader/read-string v)))
-      :clj  (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset-transit)} %))
+      :clj (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset-transit)} %))
       ;:clj (tr/read-handler #(clojure.edn/read-string {:readers rw/tags} %))
       )})
 
@@ -1678,12 +1678,14 @@
           (duration->hrs-mins-secs du)]
       (let [hrs  [hours (if (= 1 hours) "hour" "hours")]
             secs [seconds (if (= 1 seconds) "second" "seconds")]
-            mins [minutes (if (= 1 minutes) "minute" "minutes")]]
-        (str/join " "
-          (apply concat
-            (remove #(zero? (first %)) [hrs mins secs])))))))
+            mins [minutes (if (= 1 minutes) "minute" "minutes")]
+            nums (remove #(zero? (first %)) [hrs mins secs])]
+        (if (empty? nums)
+          "Midnight"
+          (str/join " " (apply concat nums)))))))
 
 (comment
+  (format-duration (duration 0 :seconds))
   (apply concat (remove #(zero? (first %)) [[0 "minutes"] [10 "seconds"]]))
   (format-duration (duration 1 :minutes 100 :seconds))
   (->> (duration->map (duration 1 :minutes 10 :seconds))
@@ -1759,7 +1761,7 @@
 
 (defn parse-int [int-str]
   #?(:cljs (js/parseInt int-str 10)
-     :clj  (Long/parseLong int-str)))
+     :clj (Long/parseLong int-str)))
 
 (>defn to-int
   [str-num]
