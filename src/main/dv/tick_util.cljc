@@ -15,8 +15,7 @@
     [tick.core :refer [ITimeComparison ITimeArithmetic]]
     [tick.locale-en-us]
     [time-literals.read-write :as rw]
-    #?(:clj [taoensso.nippy :as nippy
-             :refer [swap-serializable-whitelist!]])
+    #?(:clj [taoensso.nippy :as nippy])
     [taoensso.timbre :as log])
   #?(:clj (:import
             [java.io ByteArrayInputStream ByteArrayOutputStream Writer]
@@ -24,21 +23,18 @@
                        OffsetDateTime ZoneId DayOfWeek LocalTime Month Duration Year YearMonth])))
 
 #?(:clj
-   (swap-serializable-whitelist!
-     (fn [old]
-       (conj old "java.time.*"))))
+   (alter-var-root (var nippy/*thaw-serializable-allowlist*)
+     (fn [c] (conj c "java.time.*"))))
 
-;;;
 ;;; Docs for date time types:
 
 ;;; https://js-joda.github.io/js-joda/manual/LocalDate.html
 ;;; https://docs.oracle.com/javase/8/docs/api/java/time/LocalDate.html
 ;;;
 
-
 (defn error [& msg]
   #?(:cljs (js/Error. (apply str msg))
-     :clj (RuntimeException. (apply str msg))))
+     :clj  (RuntimeException. (apply str msg))))
 
 (defn throw* [& args]
   (throw (apply error args)))
@@ -957,7 +953,7 @@
   (week-num (t/new-date 2021 1 3))
   (week-num (t/new-date 2021 1 4))
   (week-num (t/new-date 2020 2 1))
-  (week-num (t/new-date 2022 1 1)) ;saturday
+  (week-num (t/new-date 2022 1 1))                          ;saturday
   (week-num (t/new-date 2022 1 2))
   (week-num (t/new-date 2022 1 3))
   (week-num (t/new-date 2023 1 1))
@@ -1005,8 +1001,8 @@
   (week-index (t/date "2020-01-01"))
   (week-index (t/date "2020-01-05"))
   ;(week-index (js/Date.))
-  (week-index (t/date "2020-02-01")) ; should be 0
-  (week-index (t/date "2020-02-02")) ; should be 1
+  (week-index (t/date "2020-02-01"))                        ; should be 0
+  (week-index (t/date "2020-02-02"))                        ; should be 1
   (week-index (t/date "2020-02-09"))
   (week-num (first-day-of-month (t/date "2020-02-01")))
   (week (t/inst)))
@@ -1098,9 +1094,9 @@
 
 (def tick-transit-write-handler
   #?(:cljs (TickHandler.)
-     :clj (tr/write-handler
-            transit-tag
-            (fn [v] (pr-str v)))))
+     :clj  (tr/write-handler
+             transit-tag
+             (fn [v] (pr-str v)))))
 
 (def tick-transit-writer-handler-map
   (reduce
@@ -1154,7 +1150,7 @@
               (if (str/starts-with? v "#time/offset ")
                 (read-offset-transit v)
                 (cljs.reader/read-string v)))
-      :clj (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset-transit)} %))
+      :clj  (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset-transit)} %))
       ;:clj (tr/read-handler #(clojure.edn/read-string {:readers rw/tags} %))
       )})
 
@@ -1761,7 +1757,7 @@
 
 (defn parse-int [int-str]
   #?(:cljs (js/parseInt int-str 10)
-     :clj (Long/parseLong int-str)))
+     :clj  (Long/parseLong int-str)))
 
 (>defn to-int
   [str-num]
