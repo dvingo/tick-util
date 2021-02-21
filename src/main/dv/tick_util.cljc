@@ -698,13 +698,20 @@
       (clojure.core/+ offset)
       (mod 7))))
 
-(def day-of-week-monday (partial day-of-week-with-offset (day-of-week-offsets t/MONDAY)))
-(def day-of-week-sunday (partial day-of-week-with-offset (day-of-week-offsets t/SUNDAY)))
-(def day-of-week-saturday (partial day-of-week-with-offset (day-of-week-offsets t/SATURDAY)))
-(def day-of-week-friday (partial day-of-week-with-offset (day-of-week-offsets t/FRIDAY)))
-(def day-of-week-thursday (partial day-of-week-with-offset (day-of-week-offsets t/THURSDAY)))
-(def day-of-week-wednesday (partial day-of-week-with-offset (day-of-week-offsets t/WEDNESDAY)))
-(def day-of-week-tuesday (partial day-of-week-with-offset (day-of-week-offsets t/TUESDAY)))
+(def ^{:doc "Returns int between 0-6 where zero is Monday."}
+  day-of-week-monday (partial day-of-week-with-offset (day-of-week-offsets t/MONDAY)))
+(def ^{:doc "Returns int between 0-6 where zero is Sunday."}
+  day-of-week-sunday (partial day-of-week-with-offset (day-of-week-offsets t/SUNDAY)))
+(def ^{:doc "Returns int between 0-6 where zero is Tuesday."}
+  day-of-week-saturday (partial day-of-week-with-offset (day-of-week-offsets t/SATURDAY)))
+(def ^{:doc "Returns int between 0-6 where zero is Friday."}
+  day-of-week-friday (partial day-of-week-with-offset (day-of-week-offsets t/FRIDAY)))
+(def ^{:doc "Returns int between 0-6 where zero is Thursday."}
+  day-of-week-thursday (partial day-of-week-with-offset (day-of-week-offsets t/THURSDAY)))
+(def ^{:doc "Returns int between 0-6 where zero is Wednesday."}
+  day-of-week-wednesday (partial day-of-week-with-offset (day-of-week-offsets t/WEDNESDAY)))
+(def ^{:doc "Returns int between 0-6 where zero is Tuesday."}
+  day-of-week-tuesday (partial day-of-week-with-offset (day-of-week-offsets t/TUESDAY)))
 
 (comment
   ;; thur - 3 for monday based week
@@ -833,11 +840,22 @@
    (take 7 (period-seq (t/new-period 1 :days) (prior-sunday d)))))
 (comment (get-days-of-week (next-month)))
 
+(defn weeks-of-month-monday
+  "Returns a seq of seqs containing dates where the interior seqs are seven days of a week starting on Monday.
+   Some dates from the prior month and subsequent may be in the first and last seq, as each seq is a full week."
+  ([] (weeks-of-month-monday (t/date-time)))
+  ([d]
+   (let [s (prior-monday (start-of-month d))
+         e (t/date (next-day (next-day (end-of-month d))))]
+     (partition 7 (t/range s e (t/new-period 1 :days))))))
+
 (defn weeks-of-month
+  "Returns a seq of seqs containing dates where the interior seqs are seven days of a week starting on Sunday.
+   Some dates from the prior month and subsequent may be in the first and last seq, as each seq is a full week."
   ([] (weeks-of-month (t/date-time)))
   ([d]
    (let [s (prior-sunday (start-of-month d))
-         e (next-day (next-sunday (end-of-month d)))]
+         e (t/date (next-day (next-sunday (end-of-month d))))]
      (partition 7 (t/range s e (t/new-period 1 :days))))))
 
 (comment (weeks-of-month))
@@ -953,7 +971,7 @@
   (week-num (t/new-date 2021 1 3))
   (week-num (t/new-date 2021 1 4))
   (week-num (t/new-date 2020 2 1))
-  (week-num (t/new-date 2022 1 1))                          ;saturday
+  (week-num (t/new-date 2022 1 1)) ;saturday
   (week-num (t/new-date 2022 1 2))
   (week-num (t/new-date 2022 1 3))
   (week-num (t/new-date 2023 1 1))
@@ -1001,8 +1019,8 @@
   (week-index (t/date "2020-01-01"))
   (week-index (t/date "2020-01-05"))
   ;(week-index (js/Date.))
-  (week-index (t/date "2020-02-01"))                        ; should be 0
-  (week-index (t/date "2020-02-02"))                        ; should be 1
+  (week-index (t/date "2020-02-01")) ; should be 0
+  (week-index (t/date "2020-02-02")) ; should be 1
   (week-index (t/date "2020-02-09"))
   (week-num (first-day-of-month (t/date "2020-02-01")))
   (week (t/inst)))
