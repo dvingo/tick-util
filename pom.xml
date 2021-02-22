@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dv</groupId>
   <artifactId>tick-util</artifactId>
-  <version>2031.0.0</version>
+  <version>2031.1.0</version>
   <name>tick-utils</name>
   <description>Utils for juxt/tick</description>
   <url>https://github.com/dvingo/tick-util</url>

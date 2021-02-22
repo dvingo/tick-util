@@ -846,8 +846,10 @@
   ([] (weeks-of-month-monday (t/date-time)))
   ([d]
    (let [s (prior-monday (start-of-month d))
-         e (t/date (next-day (next-day (end-of-month d))))]
+         e (t/date (next-monday (prior-day (end-of-month d))))]
      (partition 7 (t/range s e (t/new-period 1 :days))))))
+(comment
+  (weeks-of-month-monday #time/date "2021-02-04"))
 
 (defn weeks-of-month
   "Returns a seq of seqs containing dates where the interior seqs are seven days of a week starting on Sunday.
@@ -855,10 +857,11 @@
   ([] (weeks-of-month (t/date-time)))
   ([d]
    (let [s (prior-sunday (start-of-month d))
-         e (t/date (next-day (next-sunday (end-of-month d))))]
+         e (t/date (next-sunday (prior-day (end-of-month d))))]
      (partition 7 (t/range s e (t/new-period 1 :days))))))
 
-(comment (weeks-of-month))
+(comment (weeks-of-month)
+  (weeks-of-month (t/date "2021-03-01")))
 
 (defn prior-sunday-of-month
   "See `prior-sunday`"
