@@ -607,6 +607,15 @@
 (defn today-dt []
   (t/at (t/today) (t/midnight)))
 
+(defn compare-periods
+  [op x y]
+  (when-not (period? y) (throw* (pr-str y) " is not a period."))
+  (let [m1 (.toTotalMonths x)
+        m2 (.toTotalMonths y)]
+    (if (= m1 m2)
+      (op (t/days x) (t/days y))
+      (op m1 m2))))
+
 ;; for some reason the compiler is associating clojure.core/< with the
 ;; ones defined in this namespace resulting in the comparison
 ;; functions below being called, so I add support for comparing them
@@ -616,7 +625,12 @@
   (< [x y] (clojure.core/< x y))
   (<= [x y] (clojure.core/<= x y))
   (> [x y] (clojure.core/> x y))
-  (>= [x y] (clojure.core/>= x y)))
+  (>= [x y] (clojure.core/>= x y))
+  Period
+  (< [x y] (compare-periods clojure.core/< x y))
+  (<= [x y] (compare-periods clojure.core/<= x y))
+  (> [x y] (compare-periods clojure.core/> x y))
+  (>= [x y] (compare-periods clojure.core/>= x y)))
 
 (defn make-compare
   [op]
@@ -624,12 +638,14 @@
     ;; for some reason the compiler is associating clojure.core/< with the
     ;; one defined in this namespace
     ;; so we check for times
-    (cond (or (int? d1) (int? d2))
-          (op d1 d2)
-          :else
-          (let [d1 (->instant d1)
-                d2 (->instant d2)]
-            (op d1 d2)))))
+    (cond
+      (or (and (int? d1) (int? d2))
+        (and (period? d1) (period? d2)))
+      (op d1 d2)
+      :else
+      (let [d1 (->instant d1)
+            d2 (->instant d2)]
+        (op d1 d2)))))
 
 (def > (make-compare t/>))
 (def < (make-compare t/<))
@@ -1672,6 +1688,13 @@
           duration* (t/- duration1 (t/new-duration num-days :days))
           duration* (if (zero? (t/seconds duration*)) nil duration*)]
       (->Offset period* duration*))))
+
+(defn period-between
+  [d1 d2]
+  (let [p (-period (between d1 d2))]
+    (if (nil? p)
+      (t/new-period 0 :days)
+      p)))
 
 (comment
   (between (+ (yesterday) (duration 24 :minutes 30 :seconds)) (t/now))
