@@ -194,6 +194,7 @@
 
 (comment
   (add-offset (t/date) (offset 2 :days 5 :minutes))
+  (add-offset (offset 2 :days 5 :minutes) (offset 2 :days 5 :minutes))
   (t/+ (duration 5 :minutes) (offset (t/new-duration 25 :minutes)))
   (t/+ (t/now) (offset (t/new-duration 25 :minutes)))
   (t/+ (t/now) (t/new-duration 25 :minutes)))
@@ -510,14 +511,33 @@
 (comment (date-times-in-month-arr)
   )
 
-(defn period-seq
-  "Starting at 'start' - a tick/date, return lazy seq of dates every `period` units."
+(declare ->date)
+
+(>defn period-seq
+  "Starting at 'start' - a tick/date, return lazy seq of dates every `period` units.
+  Defaults to today if no date passed."
+  ([period] [period? => seq?] (period-seq period (t/today)))
+
   ([period start]
-   (iterate #(t/+ % period) start)))
+   [period? date-type? => seq?]
+   (iterate #(t/+ % period) (->date start))))
 
 (comment (take 10 (period-seq (t/new-period 7 :days) (t/date "2020-03-15")))
   ;; similar to range:
   (take 10 (t/range (t/date-time "2020-03-15T00:00") nil (t/new-period 7 :days))))
+
+(>defn dates-in-year-every-period
+  "Return a seq of all dates within the year of the "
+  [period date]
+  [period? date-type? => seq?]
+  (if (period? period)
+    (let [date (->date date)
+          year (t/year date)]
+      (take-while #(= year (t/year %)) (period-seq period date)))))
+
+(comment
+  (tu/dates-in-year-every-period (tu/period 2 :weeks) (tu/start-of-year))
+  (tu/dates-in-year-every-period (tu/period 2 :weeks) (t/today)))
 
 (def days-seq
   "Returns an infinite lazy seq of dates starting at the passed in date"
@@ -608,7 +628,7 @@
   (t/at (t/today) (t/midnight)))
 
 (defn compare-periods
-  [op x y]
+  [op #?(:cljs ^js x :clj x) #?(:cljs ^js y :clj y)]
   (when-not (period? y) (throw* (pr-str y) " is not a period."))
   (let [m1 (.toTotalMonths x)
         m2 (.toTotalMonths y)]
@@ -1375,6 +1395,10 @@
       (and (duration? v1) (duration? v2))
       (and (period? v1) (period? v2)))
     (t/+ v1 v2)
+
+    (or (and (offset? v1) (offset? v2))
+      (and (offset? v2) (offset? v1)))
+    (add-offset v1 v2)
 
     (and (offset-type? v1) (time-type? v2))
     (t/+ (->instant v2) v1)
