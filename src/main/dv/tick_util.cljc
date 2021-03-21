@@ -108,7 +108,7 @@
 ;; and the period is at least one day.
 
 #?(:cljs
-   (deftype Offset [period duration]
+   (deftype Offset [period duration _meta]
      IEquiv
      (-equiv [this other]
        (and
@@ -119,13 +119,17 @@
      (+ [offset other] (add-offset offset other))
      (- [offset other] (subtract-offset offset other)))
    :clj
-   (deftype Offset [period duration]
+   (deftype Offset [period duration _meta]
+     clojure.lang.IObj
+     (meta [_] _meta)
+     (withMeta [_ m] (Offset. period duration _meta))
      Object
      (equals [this other]
        (and
          (= (type this) (type other))
          (= (.-period this) (.-period other))
          (= (.-duration this) (.-duration other))))
+
      ITimeArithmetic
      (+ [offset other] (add-offset offset other))
      (- [offset other] (subtract-offset offset other))))
@@ -134,12 +138,38 @@
 ;; Error printing return value (ClassCastException) at dv.tick-util/-duration (tick_util.cljc:131).
 ;; class dv.tick_util.Offset cannot be cast to class dv.tick_util.Offset
 ;; (dv.tick_util.Offset is in unnamed module of loader clojure.lang.DynamicClassLoader @62b15496
+(comment
+  (offset 5 :hours)
+  )
+
+
 
 (defn -period [offset] (.-period ^{:tag #?(:cljs clj :clj Object)} offset))
 (defn -duration [offset] (.-duration ^{:tag #?(:cljs clj :clj Object)} offset))
 
 (defn offset? [d] (instance? Offset d))
 (def offset-type? (some-fn offset? duration? period?))
+
+(s/def ::period-or-duration (s/or :period period? :duration duration?))
+
+(>defn period-duration-pair
+  "Takes either order of period/duration return [period duration]
+  with nils for either missing"
+  [v1 v2]
+  [::period-or-duration ::period-or-duration => (s/nilable offset?)]
+  (cond
+    (and (duration? v1) (or (period? v2) (nil? v2))) [v2 v1]
+    (and (or (period? v1) (nil? v1)) (duration? v2)) [v1 v2]
+
+    (and (or (duration? v1) (nil? v1)) (period? v2)) [v2 v1]
+    (and (period? v1) (or (duration? v2) (nil? v2))) [v1 v2]
+    :else nil))
+
+(>defn make-offset
+  [a1 a2]
+  [::period-or-duration ::period-or-duration => offset?]
+  (let [[period duration] (period-duration-pair a1 a2)]
+    (->Offset period duration nil)))
 
 (>defn add-offset*
   [d ^Offset offset]
@@ -267,7 +297,7 @@
      [data-input]
      (let [period   (nippy/thaw-from-in! data-input)
            duration (nippy/thaw-from-in! data-input)]
-       (Offset. period duration))))
+       (Offset. period duration nil))))
 
 
 (comment (offset? (->Offset (t/new-period 1 :days) (t/new-duration 1 :hours))))
@@ -330,22 +360,22 @@
   ([val]
    [(s/or :period period? :duration duration?) => offset?]
    (cond
-     (period? val) (->Offset val nil)
-     (duration? val) (->Offset nil val)
+     (period? val) (->Offset val nil nil)
+     (duration? val) (->Offset nil val nil)
      :else (throw (error "Unsupported type passed to offset: " (pr-str val)))))
 
   ([val units]
    [(s/or :int integer? :period period? :duration duration? :nil nil?)
     (s/or :units offset-units? :period period? :duration duration? :nil nil?) => offset?]
    (cond
-     (and (duration? val) (nil? units)) (->Offset units val)
-     (and (period? val) (nil? units)) (->Offset val units)
-     (and (nil? val) (period? units)) (->Offset units val)
-     (and (nil? val) (duration? units)) (->Offset val units)
-     (and (period? val) (duration? units)) (->Offset val units)
-     (and (duration? val) (period? units)) (->Offset units val)
-     (and (integer? val) (duration-units? units)) (->Offset nil (t/new-duration val units))
-     (and (integer? val) (period-units? units)) (->Offset (t/new-period val units) nil)
+     (and (duration? val) (nil? units)) (->Offset units val nil)
+     (and (period? val) (nil? units)) (->Offset val units nil)
+     (and (nil? val) (period? units)) (->Offset units val nil)
+     (and (nil? val) (duration? units)) (->Offset val units nil)
+     (and (period? val) (duration? units)) (->Offset val units nil)
+     (and (duration? val) (period? units)) (->Offset units val nil)
+     (and (integer? val) (duration-units? units)) (->Offset nil (t/new-duration val units) nil)
+     (and (integer? val) (period-units? units)) (->Offset (t/new-period val units) nil nil)
      :else (throw (error (str "Unknown units passed to offset: " units)))))
 
   ([val units val2 units2]
@@ -1175,7 +1205,7 @@
   (let [[period duration] (str/split offset-str #" ")]
     `(let [period#   (if (= "nil" ~period) nil (. java.time.Period ~'parse ~period))
            duration# (if (= "nil" ~duration) nil (. java.time.Duration ~'parse ~duration))]
-       (->Offset period# duration#))))
+       (->Offset period# duration# nil))))
 
 #?(:cljs (cljs.reader/register-tag-parser! 'time/offset read-offset-edn))
 
@@ -1186,7 +1216,7 @@
         [period duration] (str/split offset-str #" ")
         period*    (if (= "nil" period) nil (. java.time.Period parse period))
         duration*  (if (= "nil" duration) nil (. java.time.Duration parse duration))]
-    (->Offset period* duration*)))
+    (->Offset period* duration* nil)))
 
 (comment
   (. Period parse "nil")
@@ -1711,7 +1741,7 @@
           period*   (if (zero? num-days) nil (t/new-period num-days :days))
           duration* (t/- duration1 (t/new-duration num-days :days))
           duration* (if (zero? (t/seconds duration*)) nil duration*)]
-      (->Offset period* duration*))))
+      (->Offset period* duration* nil))))
 
 (defn period-between
   [d1 d2]
