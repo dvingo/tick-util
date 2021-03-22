@@ -10,7 +10,7 @@
     [clojure.spec.alpha :as s]
     [clojure.string :as str]
     [cognitect.transit :as tr]
-    [com.fulcrologic.guardrails.core :refer [>defn >def | =>]]
+    [com.fulcrologic.guardrails.core :refer [>defn >def | => ?]]
     [tick.alpha.api :as t]
     [tick.core :refer [ITimeComparison ITimeArithmetic]]
     [tick.locale-en-us]
@@ -122,7 +122,7 @@
    (deftype Offset [period duration _meta]
      clojure.lang.IObj
      (meta [_] _meta)
-     (withMeta [_ m] (Offset. period duration _meta))
+     (withMeta [_ _m] (->Offset period duration _m))
      Object
      (equals [this other]
        (and
@@ -150,8 +150,6 @@
 (defn offset? [d] (instance? Offset d))
 (def offset-type? (some-fn offset? duration? period?))
 
-(s/def ::period-or-duration (s/or :period period? :duration duration?))
-
 (>defn period-duration-pair
   "Takes either order of period/duration return [period duration]
   with nils for either missing"
@@ -164,12 +162,6 @@
     (and (or (duration? v1) (nil? v1)) (period? v2)) [v2 v1]
     (and (period? v1) (or (duration? v2) (nil? v2))) [v1 v2]
     :else nil))
-
-(>defn make-offset
-  [a1 a2]
-  [::period-or-duration ::period-or-duration => offset?]
-  (let [[period duration] (period-duration-pair a1 a2)]
-    (->Offset period duration nil)))
 
 (>defn add-offset*
   [d ^Offset offset]
@@ -300,7 +292,7 @@
        (Offset. period duration nil))))
 
 
-(comment (offset? (->Offset (t/new-period 1 :days) (t/new-duration 1 :hours))))
+(comment (offset? (->Offset (t/new-period 1 :days) (t/new-duration 1 :hours) nil)))
 
 (comment
   (nippy/thaw (nippy/freeze (offset 1 :hours 1 :days)))
@@ -388,7 +380,7 @@
                     (period-units? units2) (t/new-period val2 units2))]
      (when (and (nil? duration) (nil? period))
        (throw (error (str "Unknown units passed to offset: " units " and " units2))))
-     (->Offset period duration))))
+     (->Offset period duration nil))))
 
 (defn at-midnight
   "Input: date or date-time return date-time at 00:00"
@@ -1220,6 +1212,7 @@
 
 (comment
   (. Period parse "nil")
+
   (-duration #time/offset"nil PT1H")
   #time/offset"nil PT1H"
   (offset (t/new-duration 1 :hours) (t/new-period 2 :days))
