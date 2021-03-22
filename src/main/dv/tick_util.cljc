@@ -109,6 +109,11 @@
 
 #?(:cljs
    (deftype Offset [period duration _meta]
+     IMeta
+     (-meta [_] _meta)
+     IWithMeta
+     (-with-meta [_ _m] (Offset. period duration _m))
+
      IEquiv
      (-equiv [this other]
        (and
@@ -122,7 +127,7 @@
    (deftype Offset [period duration _meta]
      clojure.lang.IObj
      (meta [_] _meta)
-     (withMeta [_ _m] (->Offset period duration _m))
+     (withMeta [_ _m] (Offset. period duration _m))
      Object
      (equals [this other]
        (and
@@ -141,8 +146,6 @@
 (comment
   (offset 5 :hours)
   )
-
-
 
 (defn -period [offset] (.-period ^{:tag #?(:cljs clj :clj Object)} offset))
 (defn -duration [offset] (.-duration ^{:tag #?(:cljs clj :clj Object)} offset))
