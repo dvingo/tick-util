@@ -1200,7 +1200,7 @@
   (let [[period duration] (str/split offset-str #" ")]
     `(let [period#   (if (= "nil" ~period) nil (. java.time.Period ~'parse ~period))
            duration# (if (= "nil" ~duration) nil (. java.time.Duration ~'parse ~duration))]
-       (->Offset period# duration# nil))))
+       (Offset. period# duration# nil))))
 
 #?(:cljs (cljs.reader/register-tag-parser! 'time/offset read-offset-edn))
 
