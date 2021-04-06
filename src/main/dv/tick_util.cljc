@@ -1399,10 +1399,7 @@
 
 (comment (time->duration #time/time "13:34"))
 
-(defn +
-  "Add thing without caring about type
-  any combination of:
-  time-type? duration|period|offset => time-type?"
+(defn +impl
   [v1 v2]
   [(s/or :time time-type? :offset offset-type? :nil nil?)
    (s/or :time time-type? :offset offset-type? :nil nil?)
@@ -1465,7 +1462,18 @@
     :else
     (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " \nvals: " (pr-str v1) ", " (pr-str v2)))))
 
+(defn +
+  "Add thing without caring about type
+  any combination of:
+  time-type? duration|period|offset => time-type?"
+  ([] (offset nil (. Duration -ZERO)))
+  ([arg] arg)
+  ([arg & args]
+   (reduce #(+impl %1 %2) arg args)))
+
 (comment
+  (+ (offset 1 :days) (offset 2 :hours) (offset 3 :days)
+    (period 1 :days))
   (+ #time/time "04:00" #time/time "05:02")
 
   (let [t (t/time "13:03")]
@@ -1903,5 +1911,3 @@
   (period 1 :months 2 :days)
   (+ (today) (period 1 :years))
   )
-
-
