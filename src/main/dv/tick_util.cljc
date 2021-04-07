@@ -1748,6 +1748,7 @@
       (->Offset period* duration* nil))))
 
 (defn period-between
+  "Returns a period "
   [d1 d2]
   (let [p (-period (between d1 d2))]
     (if (nil? p)
