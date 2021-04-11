@@ -6,20 +6,24 @@ Extracted from an app, contains some helpers for tick.
 
 Build a deployable jar of this library:
 
-    $ clojure -X:jar
+```bash
+make
+```
 
 Install it locally:
 
-    $ clojure -M:install
+```bash
+clojure -M:install
+```
 
 Deploy it to Clojars -- needs `CLOJARS_USERNAME` and `CLOJARS_PASSWORD` environment variables:
 
-    $ clojure -M:deploy
-
+```bash
+clojure -M:deploy
+```
 
 # Deploy notes for clojars
 
-1. Update the version of the maven package in pom.xml.
-2. Build the jar
-   make
+1. Update the version of the maven package in pom.xml and git commit.
+2. Build the jar via `make`
 3. CLOJARS_USERNAME='' CLOJARS_PASSWORD='deploy_token' clojure -A:deploy 
