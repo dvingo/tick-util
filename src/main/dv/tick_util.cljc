@@ -12,7 +12,7 @@
     [cognitect.transit :as tr]
     [com.fulcrologic.guardrails.core :refer [>defn >def | => ?]]
     [tick.alpha.api :as t]
-    [tick.core :refer [ITimeComparison ITimeArithmetic]]
+    [tick.protocols :refer [ITimeComparison ITimeArithmetic]]
     [tick.locale-en-us]
     [time-literals.read-write :as rw]
     #?(:clj [taoensso.nippy :as nippy])
