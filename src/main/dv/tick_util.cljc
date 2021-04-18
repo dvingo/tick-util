@@ -754,7 +754,7 @@
   [offset date]
   (let [offset (cond-> offset (not (int? offset)) day-of-week-offsets)]
     (-> (t/day-of-week date)
-      ;; go to zero based so modular arithemetic works
+      ;; go to zero based so modular arithmetic works
       t/int dec
       (clojure.core/+ offset)
       (mod 7))))
