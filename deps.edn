@@ -1,18 +1,19 @@
 {:paths   ["src/main"]
 
- :deps    {org.clojure/clojure        {:mvn/version "1.10.1"}
+ :deps    {org.clojure/clojure        {:mvn/version "1.10.3"}
            org.clojure/spec.alpha     {:mvn/version "0.2.194"}
-           com.taoensso/timbre        {:mvn/version "5.1.0"}
+           com.taoensso/timbre        {:mvn/version "5.1.2"}
            com.taoensso/tufte         {:mvn/version "2.2.0"}
-           com.fulcrologic/guardrails {:mvn/version "1.1.4"}
-           tick/tick                  {:mvn/version "0.4.31-alpha"}
+           com.fulcrologic/guardrails {:mvn/version "1.1.5"}
+           tick/tick                  {:mvn/version "0.4.32"}
+           com.taoensso/nippy         {:mvn/version "3.1.1"}
 
-           com.cognitect/transit-cljs {:mvn/version "0.8.264"}
+           com.cognitect/transit-cljs {:mvn/version "0.8.269"}
            com.cognitect/transit-clj  {:mvn/version "1.0.324"}}
 
  :aliases {:clj-tests {:extra-paths ["src/test"]
                        :main-opts   ["-m" "kaocha.runner"]
-                       :extra-deps  {lambdaisland/kaocha {:mvn/version "0.0-529"}}}
+                       :extra-deps  {lambdaisland/kaocha {:mvn/version "1.0.861"}}}
 
            :jar       {:replace-deps {seancorfield/depstar {:mvn/version "2.0.165"}}
                        :exec-fn hf.depstar/jar
@@ -27,11 +28,10 @@
            :dev       {:extra-paths ["src/test" "src/dev"]
                        :jvm-opts    ["-XX:-OmitStackTraceInFastThrow"]
 
-                       :extra-deps  {org.clojure/clojurescript   {:mvn/version "1.10.773"}
-                                     org.clojure/test.check      {:mvn/version "1.0.0"}
-                                     thheller/shadow-cljs        {:mvn/version "2.11.11"}
+                       :extra-deps  {org.clojure/clojurescript   {:mvn/version "1.10.879"}
+                                     org.clojure/test.check      {:mvn/version "1.1.0"}
+                                     thheller/shadow-cljs        {:mvn/version "2.15.8"}
                                      ;; Formats spec explain.
-                                     expound/expound             {:mvn/version "0.8.7"}
-                                     fulcrologic/fulcro-spec     {:mvn/version "3.1.4"}
-                                     binaryage/devtools          {:mvn/version "1.0.2"}
+                                     expound/expound             {:mvn/version "0.8.9"}
+                                     binaryage/devtools          {:mvn/version "1.0.3"}
                                      org.clojure/tools.namespace {:mvn/version "1.1.0"}}}}}
