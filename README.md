@@ -26,4 +26,4 @@ clojure -M:deploy
 
 1. Update the version of the maven package in pom.xml and git commit.
 2. Build the jar via `make`
-3. CLOJARS_USERNAME='' CLOJARS_PASSWORD='deploy_token' clojure -A:deploy 
+3. CLOJARS_USERNAME='' CLOJARS_PASSWORD='deploy_token' clojure -M:deploy 
