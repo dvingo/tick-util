@@ -11,7 +11,9 @@
     [clojure.string :as str]
     [cognitect.transit :as tr]
     [com.fulcrologic.guardrails.core :refer [>defn >def | => ?]]
-    [tick.alpha.api :as t]
+    [tick.core :as t]
+    [tick.alpha.interval :as t.i]
+    ;[tick.alpha.api :as t]
     [tick.protocols :refer [ITimeComparison ITimeArithmetic]]
     [tick.locale-en-us]
     [time-literals.read-write :as rw]
@@ -402,20 +404,20 @@
   (at-midnight (t/date-time))
   (at-midnight (t/inst)))
 
-(defn first-of-year [] (-> (t/year) t/bounds t/beginning))
+(defn first-of-year [] (-> (t/year) t.i/bounds t/beginning))
 (comment (first-of-year))
 
 (defn start-of [v]
-  (t/beginning (t/bounds v)))
+  (t/beginning (t.i/bounds v)))
 (comment (start-of (t/bounds (t/date-time))))
 
 (defn end-of [v]
-  (t/end (t/bounds v)))
+  (t/end (t.i/bounds v)))
 
 (defn start-of-year
   "Input: optional [int] year - returns date-time at start of `year`"
   ([] (start-of-year (t/year)))
-  ([year] (-> (t/year year) t/bounds t/beginning)))
+  ([year] (-> (t/year year) t.i/bounds t/beginning)))
 
 (defn end-of-year
   ([] (end-of-year (t/date-time)))
@@ -450,7 +452,7 @@
 (defn months-in-year
   ([] (months-in-year (t/year)))
   ([d]
-   (let [intvl (t/bounds (t/year d))]
+   (let [intvl (t.i/bounds (t/year d))]
      (t/range (t/beginning intvl)
        (t/end intvl)
        (t/new-period 1 :months)))))
@@ -470,7 +472,7 @@
   ([] (last-day-of-month (t/today)))
   ([date]
    (let [the-first (first-day-of-month date)]
-     (t/end (t/bounds the-first
+     (t/end (t.i/bounds the-first
               (t/-
                 (t/+ the-first (t/new-period 1 :months))
                 (t/new-period 1 :days)))))))
@@ -572,7 +574,7 @@
 (defn interval-seq
   "Returns lazy seq of intervals starting at `start` separated by `period`."
   [period start]
-  (let [start-intvl (t/new-interval start (t/+ start period))]
+  (let [start-intvl (t.i/new-interval start (t/+ start period))]
     (iterate #(t/>> % period) start-intvl)))
 
 (def week-intvl-seq (partial interval-seq (t/new-period 7 :days)))
@@ -942,11 +944,13 @@
         ;; Start at the first of the year and move back to prior sunday
         sunday    (t/+ (t/new-date (t/year date) 1 1)
                     (t/new-period d-offset :days))
-        intvl     (t/bounds sunday (t/new-date (t/year date) 12 31))]
-    (map #(apply t/new-interval %)
-      (t/divide-by (t/new-period 7 :days) intvl))))
+        intvl     (t.i/bounds sunday (t/new-date (t/year date) 12 31))]
+    (map #(apply t.i/new-interval %)
+      (t.i/divide-by (t/new-period 7 :days) intvl))))
 
-(comment (get-weeks (t/date)))
+
+(comment (get-weeks (t/date))
+  (t/fields (t/now)))
 
 ;; todo test, need to get full list of interval relations, see comment below here,
 ;; there's also an example in the tick docs you can use
@@ -955,9 +959,9 @@
   "Is date inside given interval (or start end)"
   ([intvl d]
    (contains? #{:starts :meets :during :finishes}
-     (t/relation d intvl)))
+     (t.i/relation d intvl)))
   ([start end d]
-   (within? (t/new-interval start end) d)))
+   (within? (t.i/new-interval start end) d)))
 
 (defn within-new?
   "Is date inside given interval (or start end)"
@@ -979,12 +983,12 @@
 
   (within? (t/yesterday) (t/tomorrow) (t/today))
   (within? (t/yesterday) (t/today) (t/today))
-  (within? (t/new-interval (t/yesterday) (t/tomorrow)) (t/now))
+  (within? (t.i/new-interval (t/yesterday) (t/tomorrow)) (t/now))
   (within? (start-of-year) (t/date-time) (t/date-time))
   (within? (start-of-year) (t/date-time) (t/date-time))
   (within? (start-of-year) (t/yesterday) (t/date-time))
   (within? (start-of-year) (t/date-time) (t/yesterday))
-  (within? (t/new-interval (start-of-year) (t/date-time)) (t/today))
+  (within? (t.i/new-interval (start-of-year) (t/date-time)) (t/today))
   )
 
 (comment
@@ -1090,7 +1094,7 @@
   (week (t/inst)))
 
 (comment
-  (def i (t/new-interval (t/date "2020-03-15") (t/+ (t/date "2020-03-15") (t/new-period 7 :days))))
+  (def i (t.i/new-interval (t/date "2020-03-15") (t/+ (t/date "2020-03-15") (t/new-period 7 :days))))
   i
   (t/>> i (t/new-period 7 :days)))
 

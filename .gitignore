@@ -27,3 +27,4 @@ resources/public/js
 target
 package-lock.json
 crux-store
+cljs-test-runner-out
