@@ -45,6 +45,7 @@
 (def Time LocalTime)
 ;; Tick types
 
+
 ;Duration
 ;Period
 
@@ -622,12 +623,18 @@
   (cond
     (date-time? v) (t/date v)
     (date? v) v
-    (instant? v) (t/date v)
+    (t/instant? v) (t/date v)
     (inst? v) (t/date v)
+    (string? v) (t/date v)
+    (t/year? v)  (t/new-date (t/int v) 1 1)
     :else
     (do
       (log/error (str "Unsupported type passed to ->date: " (pr-str v)))
       nil)))
+
+(comment
+  (->date "2021-09-29")
+  (->date (t/year)))
 
 (defn ->date-time [v]
   (cond
@@ -635,6 +642,12 @@
     (date? v) (t/at v (t/midnight))
     (instant? v) (t/date-time v)
     (inst? v) (t/date-time v)
+    (string? v)
+    (try
+      (t/date-time v)
+      (catch #?(:cljs js/Error :clj java.time.format.DateTimeParseException) e
+        (-> v (t/date) (->date-time))))
+    (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
     :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
 
 (defn ->time [v]
@@ -643,12 +656,13 @@
     (date? v) (t/midnight)
     (instant? v) (t/time (t/date-time v))
     (inst? v) (t/time (t/date-time v))
+    (t/year? v) (-> (->date-time v) t/time)
     :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
 
 (comment
   (->date-time (t/year))
   (t/date-time (t/year))
-  )
+  (->time (t/year)))
 
 (defn today-dt []
   (t/at (t/today) (t/midnight)))
@@ -764,7 +778,7 @@
   day-of-week-monday (partial day-of-week-with-offset (day-of-week-offsets t/MONDAY)))
 (def ^{:doc "Returns int between 0-6 where zero is Sunday."}
   day-of-week-sunday (partial day-of-week-with-offset (day-of-week-offsets t/SUNDAY)))
-(def ^{:doc "Returns int between 0-6 where zero is Tuesday."}
+(def ^{:doc "Returns int between 0-6 where zero is Saturday."}
   day-of-week-saturday (partial day-of-week-with-offset (day-of-week-offsets t/SATURDAY)))
 (def ^{:doc "Returns int between 0-6 where zero is Friday."}
   day-of-week-friday (partial day-of-week-with-offset (day-of-week-offsets t/FRIDAY)))
@@ -778,7 +792,7 @@
 (comment
   ;; thur - 3 for monday based week
   (def d (t/date "2020-05-14"))
-  (day-of-week-offset 0 (t/date "2020-05-14"))
+  (day-of-week-offsets 0 (t/date "2020-05-14"))
   (day-of-week-monday d)
   (day-of-week-tuesday d)
   (day-of-week-wednesday d)
@@ -895,6 +909,8 @@
   (next-sunday (t/date "2020-05-29"))
   )
 
+;; todo extract `prior-sunday` into an argument to make this generic
+;; across days of the week.
 (defn get-days-of-week
   "date-times from prior sunday to subsequent for passed in val."
   ([] (get-days-of-week (t/now)))
