@@ -563,8 +563,8 @@
       (take-while #(= year (t/year %)) (period-seq period date)))))
 
 (comment
-  (tu/dates-in-year-every-period (tu/period 2 :weeks) (tu/start-of-year))
-  (tu/dates-in-year-every-period (tu/period 2 :weeks) (t/today)))
+  (dates-in-year-every-period (period 2 :weeks) (start-of-year))
+  (dates-in-year-every-period (period 2 :weeks) (t/today)))
 
 (def days-seq
   "Returns an infinite lazy seq of dates starting at the passed in date"

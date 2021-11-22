@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dv</groupId>
   <artifactId>tick-util</artifactId>
-  <version>2021-09-20.0.0</version>
+  <version>2021-11-22.0.0</version>
   <name>tick-utils</name>
   <description>Utils for juxt/tick</description>
   <url>https://github.com/dvingo/tick-util</url>
@@ -33,7 +33,7 @@
     <dependency>
       <groupId>com.fulcrologic</groupId>
       <artifactId>guardrails</artifactId>
-      <version>1.1.5</version>
+      <version>1.1.7</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -43,7 +43,7 @@
     <dependency>
       <groupId>tick</groupId>
       <artifactId>tick</artifactId>
-      <version>0.5.0-RC1</version>
+      <version>0.5.0-RC5</version>
     </dependency>
     <dependency>
       <groupId>com.taoensso</groupId>
