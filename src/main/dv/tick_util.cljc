@@ -1039,6 +1039,10 @@
 
 (def week-num (memoize week-num*))
 
+; There is also this technique, but may not support weeks on "unaligned" days:
+; (-> (cljc.java-time.local-date/now)
+;  (cljc.java-time.local-date/get cljc.java-time.temporal.chrono-field/aligned-week-of-year))
+
 (comment
   (time (week-num (t/new-date 2021 3 5)))
   (time (week-num* (t/new-date 2021 3 5))))
