@@ -1,5 +1,6 @@
 (ns dv.tick-util
   (:refer-clojure :exclude [< > >= <= + - format time])
+  #?(:cljs (:require-macros [dv.tick-util]))
   (:require
     #?(:cljs [cljs.reader] :clj [clojure.edn])
     #?(:cljs [java.time :refer
@@ -626,7 +627,7 @@
     (t/instant? v) (t/date v)
     (inst? v) (t/date v)
     (string? v) (t/date v)
-    (t/year? v)  (t/new-date (t/int v) 1 1)
+    (t/year? v) (t/new-date (t/int v) 1 1)
     :else
     (do
       (log/error (str "Unsupported type passed to ->date: " (pr-str v)))
@@ -909,6 +910,36 @@
   (next-sunday (t/date "2020-05-29"))
   )
 
+;; todo write preds for days of week (= t/SUNDAY (->date x (t/day-of-week)) etc
+
+(defn week*
+  [start-fn at-end?-pred subsequent-fn]
+  (t/range
+    (start-fn)
+    (if (at-end?-pred (t/today))
+      (t/today)
+      (subsequent-fn))))
+
+;; todo update the week* version to take a date-like object (could also support year, month etc)
+
+(def monday-week (partial week* prior-monday #(= t/SUNDAY (t/day-of-week %)) next-sunday))
+(def sunday-week (partial week* prior-sunday #(= t/SATURDAY (t/day-of-week %)) next-saturday))
+
+(defn week
+  "Return a seq of date-times starting from the prior Monday"
+  ([] (t/range
+        (prior-monday)
+        (if (= t/SUNDAY (t/day-of-week))
+          (t/today)
+          (next-sunday))))
+  ([d]))
+
+(comment
+  (= (monday-week) (week))
+  (map t/day-of-week (sunday-week))
+  (map t/day-of-week (monday-week))
+  (week)
+)
 ;; todo extract `prior-sunday` into an argument to make this generic
 ;; across days of the week.
 (defn get-days-of-week
@@ -1328,6 +1359,12 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; name ideas: floor-minutes, truncate-duration duration->just-minutes
+;; duration->only-minutes
+;; duration->minutes-only
+;; drop-hours
+;; without-hours
+;;
 (defn rest-minutes
   "take a duration remove the hours and get mins remaining"
   [duration]
@@ -1415,6 +1452,7 @@
   (.plusMinutes (t/new-duration 1 :hours) 20)
   )
 
+;; todo - could take a string and pass that to this fn as well and then dispatch on type
 (defn time->duration
   "Given a time object return a duration."
   [t]
@@ -1487,8 +1525,8 @@
 
 (defn +
   "Add thing without caring about type
-  any combination of:
-  time-type? duration|period|offset => time-type?"
+  any combination of any two of:
+  time-type|date-type|duration|period|offset => one of these input types dependent upon the semantics based on the args."
   ([] (offset nil (. Duration -ZERO)))
   ([arg] arg)
   ([arg & args]
@@ -1524,7 +1562,8 @@
 
 (>defn -
   "Subtract things without caring about type
-  time-type? duration|period|offset => time-type?"
+  any combination of any two of:
+  time-type|date-type|duration|period|offset => one of these input types dependent upon the semantics based on the args."
   [v1 v2]
   [(s/or :time time-type? :offset offset-type? :nil nil?)
    (s/or :time time-type? :offset offset-type? :nil nil?)
@@ -1560,6 +1599,9 @@
     (and (time-type? v1) (offset-type? v2))
     (t/- (->instant v1) v2)
 
+    (and (time? v1) (time? v2))
+    (t/- (time->duration v1) (time->duration v2))
+
     ;; returns a period
     (and (period? v1) (offset? v2)) (- v1 (-period v2))
 
@@ -1571,7 +1613,7 @@
     (and (offset? v1) (duration? v2)) (offset (-period v1) (- (-duration v1) v2))
 
     :else
-    (throw (error "Unkown types passed to -: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
+    (throw (error "Unkown types passed to `-`: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
 
 (comment
   (+ (duration 10 :minutes) (duration 10 :hours))
@@ -1823,7 +1865,6 @@
     {:days   (t/days p)
      :months (t/months p)
      :years  (t/years p)}))
-
 
 (comment (period->map (t/new-period 3 :days)))
 
