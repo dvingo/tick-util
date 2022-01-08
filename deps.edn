@@ -10,11 +10,12 @@
            com.cognitect/transit-cljs {:mvn/version "0.8.269"}
            com.cognitect/transit-clj  {:mvn/version "1.0.324"}}
 
- :aliases {:clj-tests {:extra-paths ["src/test"]
-                       :main-opts   ["-m" "kaocha.runner"]
-                       :extra-deps  {lambdaisland/kaocha {:mvn/version "1.60.945"}}}
+ :aliases {:test      {:extra-paths ["src/test"]
+                       :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}}}
+           :clj-tests {:main-opts  ["-m" "kaocha.runner"]
+                       :extra-deps {lambdaisland/kaocha {:mvn/version "1.60.945"}}}
 
-           :test-node {:extra-paths ["src/test" "cljs-test-runner-out/gen"]
+           :test-node {:extra-paths ["cljs-test-runner-out/gen"]
                        :extra-deps  {olical/cljs-test-runner   {:mvn/version "3.8.0" :exclusions [org.clojure/clojurescript]}
                                      org.clojure/clojurescript {:mvn/version "1.10.893"}}
                        :main-opts   ["-m" "cljs-test-runner.main" "-x" "node" "-d" "src/test"]}

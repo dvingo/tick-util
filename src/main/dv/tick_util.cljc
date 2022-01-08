@@ -31,6 +31,7 @@
 ;;; Docs for date time types:
 
 ;;; https://js-joda.github.io/js-joda/manual/LocalDate.html
+;;; reference: https://js-joda.github.io/js-joda/identifiers.html
 ;;; https://docs.oracle.com/javase/8/docs/api/java/time/LocalDate.html
 ;;;
 
@@ -45,6 +46,10 @@
 (def DateTime LocalDateTime)
 (def Time LocalTime)
 ;; Tick types
+
+(comment (.from YearMonth (t/today))
+  (t/at (.atDay (YearMonth/from (t/today)) 1) (t/midnight))
+  )
 
 
 ;Duration
@@ -96,7 +101,6 @@
 (comment (period? (t/new-period 1 :weeks))
   (period? (. java.time.Period parse "P1D"))
   (period? (t/date)))
-
 
 (comment (time-type? (t/now)))
 
@@ -218,7 +222,6 @@
     (offset
       (+ (-period v1) (-period v2))
       (+ (-duration v1) (-duration v2)))))
-
 
 (comment
   (add-offset (t/date) (offset 2 :days 5 :minutes))
@@ -388,157 +391,6 @@
        (throw (error (str "Unknown units passed to offset: " units " and " units2))))
      (->Offset period duration nil))))
 
-(defn at-midnight
-  "Input: date or date-time return date-time at 00:00"
-  [d]
-  (cond
-    (date? d)
-    (t/at d (t/midnight))
-
-    (date-time? d)
-    (t/truncate d :days)
-
-    :otherwise
-    (throw (error "Unknown type for `at-midnight`: '" d "' of type: " (type d)))))
-
-(comment (at-midnight (t/date))
-  (at-midnight (t/date-time))
-  (at-midnight (t/inst)))
-
-(defn first-of-year [] (-> (t/year) t.i/bounds t/beginning))
-(comment (first-of-year))
-
-(defn start-of [v]
-  (t/beginning (t.i/bounds v)))
-(comment (start-of (t/bounds (t/date-time))))
-
-(defn end-of [v]
-  (t/end (t.i/bounds v)))
-
-(defn start-of-year
-  "Input: optional [int] year - returns date-time at start of `year`"
-  ([] (start-of-year (t/year)))
-  ([year] (-> (t/year year) t.i/bounds t/beginning)))
-
-(defn end-of-year
-  ([] (end-of-year (t/date-time)))
-  ([v]
-   (end-of (t/year v))))
-
-(comment (start-of-year))
-
-(defn days-this-year
-  ([]
-   (let [year (t/int (t/year))]
-     (t/range (start-of-year year) (start-of-year (inc year))
-       (t/new-duration 1 :days))))
-  ([year] (t/range (start-of-year year) (start-of-year (inc year))
-            (t/new-duration 1 :days))))
-
-(defn days-this-year-inst []
-  (->> (days-this-year)
-    (map t/inst)))
-
-(defn day-of-week-int [d]
-  (t/int (t/day-of-week d)))
-
-(defn int-month
-  ([] (int-month (t/month)))
-  ([d] (t/int (t/month d))))
-
-(defn int-year
-  ([] (int-year (t/year)))
-  ([d] (t/int (t/year d))))
-
-(defn months-in-year
-  ([] (months-in-year (t/year)))
-  ([d]
-   (let [intvl (t.i/bounds (t/year d))]
-     (t/range (t/beginning intvl)
-       (t/end intvl)
-       (t/new-period 1 :months)))))
-(comment (months-in-year))
-
-(defn first-day-of-month
-  ([] (first-day-of-month (t/today)))
-  ([date]
-   (-> date t/year-month t/beginning t/date)))
-
-(def start-of-month first-day-of-month)
-(comment (first-day-of-month)
-  (first-day-of-month (t/date-time "2020-02-09T00:00")))
-
-(defn last-day-of-month
-  "date - tick/date or similar"
-  ([] (last-day-of-month (t/today)))
-  ([date]
-   (let [the-first (first-day-of-month date)]
-     (t/end (t.i/bounds the-first
-              (t/-
-                (t/+ the-first (t/new-period 1 :months))
-                (t/new-period 1 :days)))))))
-
-(def end-of-month last-day-of-month)
-
-(comment (last-day-of-month (t/date-time "2020-02-03T00:00"))
-  (last-day-of-month)
-  (last-day-of-month (t/today))
-  (last-day-of-month (t/date "2020-04-05"))
-
-  (last-day-of-month #time/date "2020-09-18")
-  (last-day-of-month (t/+ (t/today) (t/new-period 3 :months)))
-  )
-
-(defn dates-between [start end]
-  (->> (t/range start (t/+ end (t/new-period 1 :days)) (t/new-period 1 :days))
-    (map t/date)))
-(comment (dates-between (t/date-time) (last-day-of-month))
-  (dates-between (first-day-of-month) (last-day-of-month)))
-
-(defn date-times-between [start end]
-  "Return seq of date-times at midnight for each day between start until end."
-  (t/range (at-midnight start) end
-    (t/new-period 1 :days)))
-
-(comment
-  (date-times-between (t/date-time) (last-day-of-month))
-  (date-times-between (first-day-of-month) (last-day-of-month)))
-
-(defn dates-in-month
-  "Return seq of dates for each day of the entire month of the passed in date, or of today."
-  ([] (dates-in-month (t/today)))
-  ([date]
-   (dates-between (first-day-of-month date) (last-day-of-month date))))
-
-(defn date-times-in-month
-  "Return seq of date-times for each day of the entire month of the passed in date, or of today."
-  ([] (date-times-in-month (t/today)))
-  ([date]
-   (date-times-between (first-day-of-month date) (last-day-of-month date))))
-(comment (date-times-in-month (t/date-time))
-  (date-times-in-month (t/date))
-  (date-times-in-month))
-
-(comment (days-in-month)
-  (days-in-month (t/date "2020-04-01"))
-  (last-day-of-month (t/date "2020-04-01"))
-  (last-day-of-month (t/today))
-  (dates-between (first-day-of-month) (last-day-of-month (t/today))))
-
-(defn dates-in-month-arr
-  "Return native array of dates for each day of the entire month of the passed in date, or of today."
-  ([] (into-array (dates-in-month)))
-  ([date]
-   (into-array (dates-in-month date))))
-
-(defn date-times-in-month-arr
-  "Return native array of dates for each day of the entire month of the passed in date, or of today."
-  ([] (into-array (date-times-in-month)))
-  ([date]
-   (into-array (date-times-in-month date))))
-(comment (date-times-in-month-arr)
-  )
-
 (declare ->date)
 
 (>defn period-seq
@@ -594,6 +446,7 @@
     (instant? d) (t/inst d)
     (time? d) (t/at (t/today) d)
     (inst? d) d
+    (integer? d) (t/instant d)
     :else (throw (error "Cannot convert " (pr-str d) " to inst."))))
 
 (comment (->inst (t/today))
@@ -627,7 +480,9 @@
     (t/instant? v) (t/date v)
     (inst? v) (t/date v)
     (string? v) (t/date v)
+    (t/year-month? v) (.atDay v 1)
     (t/year? v) (t/new-date (t/int v) 1 1)
+    (integer? v) (t/date (t/instant v))
     :else
     (do
       (log/error (str "Unsupported type passed to ->date: " (pr-str v)))
@@ -642,6 +497,8 @@
     (date-time? v) v
     (date? v) (t/at v (t/midnight))
     (instant? v) (t/date-time v)
+    (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
+    (t/year-month? v) (t/at (.atDay v 1) (t/midnight))
     (inst? v) (t/date-time v)
     (string? v)
     (try
@@ -662,11 +519,27 @@
 
 (comment
   (->date-time (t/year))
+  (->date-time (t/year-month))
+  (->date (t/year-month))
   (t/date-time (t/year))
   (->time (t/year)))
 
 (defn today-dt []
   (t/at (t/today) (t/midnight)))
+
+(comment (date-times-in-month (t/date-time))
+  (date-times-in-month (t/date))
+  (date-times-in-month))
+
+(comment (days-in-month)
+  (dates-in-month (t/date "2020-04-01"))
+  (dates-in-month (t/date "2020-03-01"))
+  (last-day-of-month (t/date "2020-04-01"))
+  (last-day-of-month (t/today))
+  (dates-between (first-day-of-month) (last-day-of-month (t/today))))
+
+(comment (date-times-in-month-arr)
+  )
 
 (defn compare-periods
   [op #?(:cljs ^js x :clj x) #?(:cljs ^js y :clj y)]
@@ -730,7 +603,6 @@
      ([d]
       (first (str/split (.toISOString (->inst d)) "T")))))
 (comment (iso-date-str (t/today)))
-
 
 ;; by default the DayOfWeek Enum  starts at 1 for Monday.
 ;https://docs.oracle.com/javase/8/docs/api/java/time/DayOfWeek.html
@@ -802,6 +674,14 @@
   (day-of-week-saturday d)
   (day-of-week-sunday d)
   )
+
+(defn int-month
+  ([] (int-month (t/month)))
+  ([d] (t/int (t/month d))))
+
+(defn int-year
+  ([] (int-year (t/year)))
+  ([d] (t/int (t/year d))))
 
 (defn prior
   ([units extract] (prior units extract (today-dt)))
@@ -907,39 +787,203 @@
   (next-sunday) (next-monday) (next-tuesday) (next-wednesday)
   (next-thursday) (next-friday) (next-saturday)
 
-  (next-sunday (t/date "2020-05-29"))
+  (next-sunday (t/date "2020-05-29")))
+
+(defn at-midnight
+  "Input: date or date-time return date-time at 00:00"
+  [d]
+  (cond
+    (date? d)
+    (t/at d (t/midnight))
+
+    (date-time? d)
+    (t/truncate d :days)
+
+    :otherwise
+    (throw (error "Unknown type for `at-midnight`: '" d "' of type: " (type d)))))
+
+(comment (at-midnight (t/date))
+  (at-midnight (t/date-time))
+  (at-midnight (t/inst)))
+
+(defn first-of-year [] (-> (t/year) t.i/bounds t/beginning))
+(comment (first-of-year))
+
+(defn start-of [v]
+  (t/beginning (t.i/bounds v)))
+(comment (start-of (t/bounds (t/date-time))))
+
+(defn end-of [v]
+  (t/end (t.i/bounds v)))
+
+(defn start-of-year
+  "Input: optional [int] year - returns date-time at start of `year`"
+  ([] (start-of-year (t/year)))
+  ([year] (-> (t/year year) t.i/bounds t/beginning)))
+
+(defn end-of-year
+  ([] (end-of-year (t/date-time)))
+  ([v]
+   (end-of (t/year v))))
+
+(comment (start-of-year))
+
+(defn days-this-year
+  ([]
+   (let [year (t/int (t/year))]
+     (t/range (start-of-year year) (start-of-year (inc year))
+       (t/new-duration 1 :days))))
+  ([year] (t/range (start-of-year year) (start-of-year (inc year))
+            (t/new-duration 1 :days))))
+
+(defn days-this-year-inst []
+  (->> (days-this-year)
+    (map t/inst)))
+
+(defn day-of-week-int [d]
+  (t/int (t/day-of-week d)))
+
+(defn months-in-year
+  ([] (months-in-year (t/year)))
+  ([d]
+   (let [intvl (t.i/bounds (t/year d))]
+     (t/range (t/beginning intvl)
+       (t/end intvl)
+       (t/new-period 1 :months)))))
+
+(comment (months-in-year))
+
+(defn dates-between [start end]
+  (->> (t/range (->date start) (t/+ (->date end) (t/new-period 1 :days)) (t/new-period 1 :days))
+    (map t/date)))
+
+(comment
+  (dates-between (t/year) (t/today))
+  (t/range
+    (->date (t/year))
+    (t/+ (->date (last-day-of-month)) (t/new-period 1 :days))
+    (t/new-period 1 :days))
+
+  (dates-between (t/date-time) (last-day-of-month))
+  (dates-between (first-day-of-month)
+    (last-day-of-month)))
+
+(defn date-times-between [start end]
+  "Return seq of date-times at midnight for each day between start until end."
+  (t/range (at-midnight start) end
+    (t/new-period 1 :days)))
+
+(comment
+  (date-times-between (t/date-time) (last-day-of-month))
+  (date-times-between (first-day-of-month) (last-day-of-month)))
+
+(defn first-day-of-month
+  ([] (first-day-of-month (t/today)))
+  ([date]
+   (-> date t/year-month t/beginning t/date)))
+
+(defn last-day-of-month
+  "date - tick/date or similar"
+  ([] (last-day-of-month (t/today)))
+  ([x]
+   #?(:clj (.atEndOfMonth (YearMonth/from (->date x)))
+      :cljs (.atEndOfMonth (.from YearMonth (->date x))))))
+
+(comment
+  (last-day-of-month (t/year) #_(t/date "2022-02-01"))
   )
 
-;; todo write preds for days of week (= t/SUNDAY (->date x (t/day-of-week)) etc
+(defn dates-in-month
+  "Return seq of dates for each day of the entire month of the passed in date, or of today."
+  ([] (dates-in-month (t/today)))
+  ([date]
+   (dates-between (first-day-of-month date) (last-day-of-month date))))
 
-(defn week*
-  [start-fn at-end?-pred subsequent-fn]
-  (t/range
-    (start-fn)
-    (if (at-end?-pred (t/today))
-      (t/today)
-      (subsequent-fn))))
+(defn date-times-in-month
+  "Return seq of date-times for each day of the entire month of the passed in date, or of today."
+  ([] (date-times-in-month (t/today)))
+  ([date]
+   (date-times-between (first-day-of-month date) (last-day-of-month date))))
+
+(defn dates-in-month-arr
+  "Return native array of dates for each day of the entire month of the passed in date, or of today."
+  ([] (into-array (dates-in-month)))
+  ([date]
+   (into-array (dates-in-month date))))
+
+(defn date-times-in-month-arr
+  "Return native array of dates for each day of the entire month of the passed in date, or of today."
+  ([] (into-array (date-times-in-month)))
+  ([date]
+   (into-array (date-times-in-month date))))
+
+(def start-of-month first-day-of-month)
+
+(comment (first-day-of-month)
+  (first-day-of-month (t/date-time "2020-02-09T00:00")))
+
+(def end-of-month last-day-of-month)
+
+(comment
+  ;; LEAP YEAR! HOW EXCITIN
+  (last-day-of-month (t/date-time "2020-02-03T00:00"))
+  (last-day-of-month)
+  (last-day-of-month (t/today))
+
+  (last-day-of-month (t/date "2020-04-05"))
+
+  (last-day-of-month #time/date "2020-09-18")
+  (last-day-of-month (t/+ (t/today) (t/new-period 3 :months)))
+  )
 
 ;; todo update the week* version to take a date-like object (could also support year, month etc)
 
-(def monday-week (partial week* prior-monday #(= t/SUNDAY (t/day-of-week %)) next-sunday))
-(def sunday-week (partial week* prior-sunday #(= t/SATURDAY (t/day-of-week %)) next-saturday))
-
-(defn week
+(defn week*
   "Return a seq of date-times starting from the prior Monday"
-  ([] (t/range
-        (prior-monday)
-        (if (= t/SUNDAY (t/day-of-week))
-          (t/today)
-          (next-sunday))))
-  ([d]))
+  ([day-of-week prior-fn next-fn] (week* day-of-week prior-fn next-fn (t/today)))
+  ([day-of-week prior-fn next-fn d]
+   (t/range
+     (prior-fn d)
+     (if (= day-of-week (t/day-of-week)) d (next-fn d)))))
+
+(defn week-with-days*
+  ([day-of-week prior-fn next-fn] (week-with-days* day-of-week prior-fn next-fn (t/today)))
+  ([day-of-week prior-fn next-fn d] (map (juxt identity t/day-of-week) (week* day-of-week prior-fn next-fn d))))
+
+;(def sunday-week (partial week* prior-sunday #(= t/SUNDAY (t/day-of-week %)) next-sunday))
+;; todo this should use macro to generate these
+;; could be a good use of a macro that defines macros, such that the
+;; ultimately expanded code is inlined at compile time
+(def sunday-week (partial week* t/MONDAY prior-sunday next-sunday))
+(defn sunday-week-with-days [& args] (->> (apply sunday-week args) (map (juxt identity t/day-of-week))))
+(def monday-week (partial week* t/SUNDAY prior-monday next-monday))
+(defn monday-week-with-days [& args] (->> (apply monday-week args) (map (juxt identity t/day-of-week))))
+(def tuesday-week (partial week* t/MONDAY prior-tuesday next-tuesday))
+(defn tuesday-week-with-days [& args] (->> (apply tuesday-week args) (map (juxt identity t/day-of-week))))
+
+(macroexpand '(->> (apply monday-week args) (map (juxt identity t/day-of-week))))
+
+(comment (monday-week)
+  (sunday-week-with-days)
+  (monday-week-with-days)
+  (tuesday-week-with-days)
+  )
+
+;(get-week-fn day t/SUNDAY, prior-fn prior-monday, next-fn next-monday)
+(comment
+  (get-week-fn day t/SUNDAY, prior-fn prior-monday, next-fn next-monday)
+  )
+
+(comment (week-with-days))
 
 (comment
+  (week-with-days (t/today))
+  (week (t/date "2022-01-01"))
   (= (monday-week) (week))
-  (map t/day-of-week (sunday-week))
-  (map t/day-of-week (monday-week))
+  (map (juxt identity t/day-of-week) (sunday-week))
+  (map (juxt identity t/day-of-week) (monday-week))
   (week)
-)
+  )
 ;; todo extract `prior-sunday` into an argument to make this generic
 ;; across days of the week.
 (defn get-days-of-week
