@@ -10,10 +10,6 @@
     [tick.alpha.interval :as t.i]
     [tick.core :as t]))
 
-(deftest my-test
-  (println "hello")
-  (is (= 100 100)))
-
 (deftest time-test
   (is (tu/time? (t/time)))
   (is (not (tu/time? (t/now))))
@@ -58,7 +54,6 @@
   (prop/for-all [d gen-date]
     (let [last-in-month (tu/last-day-of-month d)
           in-month      (tu/dates-in-month d)]
-      (println "inmonth: " in-month)
       (and
         (= (count in-month) (.lengthOfMonth (t/year-month d)))
         (= last-in-month (last in-month))))))
@@ -68,3 +63,31 @@
   (.lengthOfMonth (t/year-month (t/today)))
   (tu/last-day-of-month (last (tu/dates-in-month)))
   )
+
+(defn monday-week? [week]
+  (and
+    (= t/MONDAY (t/day-of-week (first week)))
+    (= t/SUNDAY (t/day-of-week (last week)))
+    (= (count week) 7)))
+
+(def monday-week-check
+  (prop/for-all [d gen-date]
+    (let [week (tu/monday-week d)]
+      (monday-week? week))))
+
+(comment (test.check/quick-check 1000 monday-week-check))
+
+(defspec monday-week-spec 100 monday-week-check)
+
+(defn sunday-week? [week]
+  (and
+    (= t/SUNDAY (t/day-of-week (first week)))
+    (= t/SATURDAY (t/day-of-week (last week)))
+    (= (count week) 7)))
+
+(def sunday-week-check
+  (prop/for-all [d gen-date]
+    (let [week (tu/sunday-week d)]
+      (sunday-week? week))))
+
+(comment (test.check/quick-check 1000 sunday-week-check))

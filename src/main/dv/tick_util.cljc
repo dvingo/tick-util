@@ -886,7 +886,7 @@
   "date - tick/date or similar"
   ([] (last-day-of-month (t/today)))
   ([x]
-   #?(:clj (.atEndOfMonth (YearMonth/from (->date x)))
+   #?(:clj  (.atEndOfMonth (YearMonth/from (->date x)))
       :cljs (.atEndOfMonth (.from YearMonth (->date x))))))
 
 (comment
@@ -944,7 +944,8 @@
   ([day-of-week prior-fn next-fn d]
    (t/range
      (prior-fn d)
-     (if (= day-of-week (t/day-of-week)) d (next-fn d)))))
+     ;; use next-day b/c range is exclusive of the end date
+     (if (= day-of-week (t/day-of-week d)) (next-day d) (next-fn d)))))
 
 (defn week-with-days*
   ([day-of-week prior-fn next-fn] (week-with-days* day-of-week prior-fn next-fn (t/today)))
@@ -954,7 +955,7 @@
 ;; todo this should use macro to generate these
 ;; could be a good use of a macro that defines macros, such that the
 ;; ultimately expanded code is inlined at compile time
-(def sunday-week (partial week* t/MONDAY prior-sunday next-sunday))
+(def sunday-week (partial week* t/SATURDAY prior-sunday next-sunday))
 (defn sunday-week-with-days [& args] (->> (apply sunday-week args) (map (juxt identity t/day-of-week))))
 (def monday-week (partial week* t/SUNDAY prior-monday next-monday))
 (defn monday-week-with-days [& args] (->> (apply monday-week args) (map (juxt identity t/day-of-week))))
@@ -963,7 +964,8 @@
 
 (macroexpand '(->> (apply monday-week args) (map (juxt identity t/day-of-week))))
 
-(comment (monday-week)
+(comment
+  (monday-week)
   (sunday-week-with-days)
   (monday-week-with-days)
   (tuesday-week-with-days)
