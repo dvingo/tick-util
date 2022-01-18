@@ -1725,6 +1725,7 @@
 
 (defn format
   "Any date-like object"
+  ([] (format (t/today)))
   ([d] (format d default-format))
   ([d fmt]
    (if d
