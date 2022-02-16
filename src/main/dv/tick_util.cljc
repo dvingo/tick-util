@@ -480,7 +480,7 @@
     (t/instant? v) (t/date v)
     (inst? v) (t/date v)
     (string? v) (t/date v)
-    (t/year-month? v) (.atDay v 1)
+    (t/year-month? v) (.atDay #?(:cljs ^js v :clj v) 1)
     (t/year? v) (t/new-date (t/int v) 1 1)
     (integer? v) (t/date (t/instant v))
     :else
@@ -498,7 +498,7 @@
     (date? v) (t/at v (t/midnight))
     (instant? v) (t/date-time v)
     (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
-    (t/year-month? v) (t/at (.atDay v 1) (t/midnight))
+    (t/year-month? v) (t/at (.atDay #?(:cljs ^js v :clj v) 1) (t/midnight))
     (inst? v) (t/date-time v)
     (string? v)
     (try
@@ -887,7 +887,7 @@
   ([] (last-day-of-month (t/today)))
   ([x]
    #?(:clj  (.atEndOfMonth (YearMonth/from (->date x)))
-      :cljs (.atEndOfMonth (.from YearMonth (->date x))))))
+      :cljs (.atEndOfMonth ^js (.from YearMonth ^js (->date x))))))
 
 (comment
   (last-day-of-month (t/year) #_(t/date "2022-02-01"))
