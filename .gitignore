@@ -28,3 +28,5 @@ target
 package-lock.json
 crux-store
 cljs-test-runner-out
+.lsp
+.clj-kondo/.cache

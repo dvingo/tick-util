@@ -1332,7 +1332,7 @@
    #?(:cljs (fn [v]
               (if (str/starts-with? v "#time/offset ")
                 (read-offset-transit v)
-                (cljs.reader/read-string v)))
+                (cljs.reader/read-string {:readers rw/tags} v)))
       :clj  (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset-transit)} %))
       ;:clj (tr/read-handler #(clojure.edn/read-string {:readers rw/tags} %))
       )})
