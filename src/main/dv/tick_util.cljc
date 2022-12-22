@@ -939,13 +939,15 @@
 ;; todo update the week* version to take a date-like object (could also support year, month etc)
 
 (defn week*
-  "Return a seq of date-times starting from the prior Monday"
+  "Return a seq of LocalDates starting from the prior Monday"
   ([day-of-week prior-fn next-fn] (week* day-of-week prior-fn next-fn (t/today)))
   ([day-of-week prior-fn next-fn d]
-   (t/range
-     (prior-fn d)
-     ;; use next-day b/c range is exclusive of the end date
-     (if (= day-of-week (t/day-of-week d)) (next-day d) (next-fn d)))))
+   (let [d' (->date d)]
+     (t/range
+       (prior-fn d')
+       ;; use next-day b/c range is exclusive of the end date
+       (if (= day-of-week (t/day-of-week d')) (next-day d') (next-fn d'))
+       (t/new-period 1 :days)))))
 
 (defn week-with-days*
   ([day-of-week prior-fn next-fn] (week-with-days* day-of-week prior-fn next-fn (t/today)))
