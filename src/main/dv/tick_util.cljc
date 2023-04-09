@@ -8,15 +8,13 @@
                Instant OffsetDateTime ZoneId DayOfWeek
                LocalTime Month Duration Year YearMonth]])
     [clojure.set :as set]
-    [clojure.spec.alpha :as s]
     [clojure.string :as str]
     [cognitect.transit :as tr]
-    [com.fulcrologic.guardrails.core :refer [>defn >def | => ?]]
+    [space.matterandvoid.tick-utils.offset :as time.offset :refer [offset? -period offset -duration]]
     [tick.core :as t]
     [tick.alpha.interval :as t.i]
     [tick.protocols :refer [ITimeComparison ITimeArithmetic]]
     [tick.locale-en-us]
-    [time-literals.read-write :as rw]
     #?(:clj [taoensso.nippy :as nippy])
     [taoensso.timbre :as log])
   #?(:clj (:import
@@ -37,13 +35,12 @@
 
 (defn error [& msg]
   #?(:cljs (js/Error. (apply str msg))
-     :clj  (RuntimeException. (apply str msg))))
+     :clj (RuntimeException. (apply str msg))))
 
 (defn throw* [& args]
   (throw (apply error args)))
 
 (def Date LocalDate)
-(def DateTime LocalDateTime)
 (def Time LocalTime)
 ;; Tick types
 
@@ -104,217 +101,11 @@
 
 (comment (time-type? (t/now)))
 
-(declare offset + - add-offset subtract-offset offset-type? -period -duration)
-
 (def date-type? (some-fn inst? instant? date? date-time?))
 (def time-type? (some-fn inst? instant? time? date? date-time?))
 
 
-;; Combines duration and period into one abstration
-;; Todo I should lock down the semantics for this - the intention is that the duration is always less than 24 hours
-;; and the period is at least one day.
 
-#?(:cljs
-   (deftype Offset [period duration _meta]
-     IMeta
-     (-meta [_] _meta)
-     IWithMeta
-     (-with-meta [_ _m] (Offset. period duration _m))
-
-     IEquiv
-     (-equiv [this other]
-       (and
-         (= (type this) (type other))
-         (= (.-period this) (-period other))
-         (= (.-duration this) (-duration other))))
-     ITimeArithmetic
-     (+ [offset other] (add-offset offset other))
-     (- [offset other] (subtract-offset offset other)))
-   :clj
-   (deftype Offset [period duration _meta]
-     clojure.lang.IObj
-     (meta [_] _meta)
-     (withMeta [_ _m] (Offset. period duration _m))
-     Object
-     (equals [this other]
-       (and
-         (= (type this) (type other))
-         (= (.-period this) (.-period other))
-         (= (.-duration this) (.-duration other))))
-
-     ITimeArithmetic
-     (+ [offset other] (add-offset offset other))
-     (- [offset other] (subtract-offset offset other))))
-
-;; If using Offset in clj instead of Object I would get the following error in certain use cases at the repl:
-;; Error printing return value (ClassCastException) at dv.tick-util/-duration (tick_util.cljc:131).
-;; class dv.tick_util.Offset cannot be cast to class dv.tick_util.Offset
-;; (dv.tick_util.Offset is in unnamed module of loader clojure.lang.DynamicClassLoader @62b15496
-(comment
-  (offset 5 :hours)
-  )
-
-(defn -period [offset] (.-period ^{:tag #?(:cljs clj :clj Object)} offset))
-(defn -duration [offset] (.-duration ^{:tag #?(:cljs clj :clj Object)} offset))
-
-(defn offset? [d] (instance? Offset d))
-(def offset-type? (some-fn offset? duration? period?))
-
-(>defn period-duration-pair
-  "Takes either order of period/duration return [period duration]
-  with nils for either missing"
-  [v1 v2]
-  [::period-or-duration ::period-or-duration => (s/nilable offset?)]
-  (cond
-    (and (duration? v1) (or (period? v2) (nil? v2))) [v2 v1]
-    (and (or (period? v1) (nil? v1)) (duration? v2)) [v1 v2]
-
-    (and (or (duration? v1) (nil? v1)) (period? v2)) [v2 v1]
-    (and (period? v1) (or (duration? v2) (nil? v2))) [v1 v2]
-    :else nil))
-
-(>defn add-offset*
-  [d ^Offset offset]
-  [time-type? offset? => time-type?]
-  (let [duration (-duration offset)
-        period   (-period offset)]
-    (cond-> d
-      duration (t/+ duration)
-      period (t/+ period))))
-
-(comment
-  (-duration (offset 2 :days 5 :minutes))
-  (t/+ (t/date-time) #time/duration "PT5M")
-  (t/+
-    (t/date)
-    (-duration (offset 2 :days 5 :minutes)))
-  (add-offset*
-    (t/date) (offset 2 :days 5 :minutes)))
-
-
-(>defn add-offset
-  [v1 v2]
-  [(s/or :time time-type? :offset offset-type?)
-   (s/or :time time-type? :offset offset-type?)
-   => (s/or :time time-type? :offset offset-type?)]
-  (cond
-    (and (time-type? v1) (offset? v2))
-    (add-offset* v1 v2)
-
-    (and (offset? v1) (time-type? v2))
-    (add-offset* v2 v1)
-
-    (and (offset? v1) (period? v2))
-    (offset (t/+ (-period v1) v2) (-duration v1))
-
-    (and (period? v1) (offset? v2))
-    (offset (t/+ (-period v2) v1) (-duration v2))
-
-    (and (offset? v1) (duration? v2))
-    (offset (-period v1)
-      (if (-duration v1) (t/+ (-duration v1) v2) v2))
-
-    (and (duration? v1) (offset? v2))
-    (offset (-period v2)
-      (if (-duration v2) (t/+ (-duration v2) v1) v1))
-
-    (and (offset? v1) (offset? v2))
-    (offset
-      (+ (-period v1) (-period v2))
-      (+ (-duration v1) (-duration v2)))))
-
-(comment
-  (add-offset (t/date) (offset 2 :days 5 :minutes))
-  (add-offset (offset 2 :days 5 :minutes) (offset 2 :days 5 :minutes))
-  (t/+ (duration 5 :minutes) (offset (t/new-duration 25 :minutes)))
-  (t/+ (t/now) (offset (t/new-duration 25 :minutes)))
-  (t/+ (t/now) (t/new-duration 25 :minutes)))
-
-(>defn subtract-offset*
-  [d ^Offset offset]
-  [time-type? offset? => time-type?]
-  (let [duration (-duration offset)
-        period   (-period offset)]
-    (cond-> d
-      duration (t/- duration)
-      period (t/- period))))
-
-(>defn subtract-offset
-  [v1 v2]
-  [(s/or :time time-type? :offset offset-type?)
-   (s/or :time time-type? :offset offset-type?)
-   => (s/or :time time-type? :offset offset-type?)]
-  (cond
-    (and (time-type? v1) (offset? v2))
-    (subtract-offset* v1 v2)
-
-    (and (offset? v1) (time-type? v2))
-    (subtract-offset* v2 v1)
-
-    (and (offset? v1) (period? v2))
-    (offset (t/- (-period v1) v2) (-duration v1))
-
-    (and (period? v1) (offset? v2))
-    (offset (t/- (-period v2) v1) (-duration v2))
-
-    (and (offset? v1) (duration? v2))
-    (offset (-period v1) (t/- (-duration v1) v2))
-
-    (and (duration? v1) (offset? v2))
-    (offset (-period v2) (t/- (-duration v2) v1))
-
-    (and (offset? v1) (offset? v2))
-    (offset
-      (- (-period v1) (-period v2))
-      (- (-duration v1) (-duration v2)))))
-
-(extend-protocol ITimeArithmetic
-  #?(:clj Object :cljs object)
-  (+ [t d]
-    (cond
-      (nil? d) t
-      (nil? t) d
-      (offset? d)
-      (add-offset t d)
-      :else
-      (.plus ^{:tag #?(:cljs clj :clj Object)} t d)))
-  (- [t d]
-    (cond
-      (nil? d) t
-      (nil? t) d
-      (offset? d)
-      (subtract-offset t d)
-      :else
-      (.minus ^{:tag #?(:cljs clj :clj Object)} t d))))
-
-#?(:clj
-   (nippy/extend-freeze Offset :dv.tick-util/offset
-     [x data-output]
-     (nippy/freeze-to-out! data-output (.-period x))
-     (nippy/freeze-to-out! data-output (.-duration x))))
-
-#?(:clj
-   (nippy/extend-thaw :dv.tick-util/offset
-     [data-input]
-     (let [period   (nippy/thaw-from-in! data-input)
-           duration (nippy/thaw-from-in! data-input)]
-       (Offset. period duration nil))))
-
-
-(comment (offset? (->Offset (t/new-period 1 :days) (t/new-duration 1 :hours) nil)))
-
-(comment
-  (nippy/thaw (nippy/freeze (offset 1 :hours 1 :days)))
-  (nippy/thaw (nippy/freeze (t/new-period 1 :days)))
-  (nippy/thaw (nippy/freeze nil))
-
-  (offset 1 :days 2 :hours)
-  (.-period (offset 1 :minutes 2 :weeks))
-  (.-period (->Offset (t/new-period 1 :weeks) nil))
-  (->Offset (t/new-period 1 :weeks) nil)
-  (offset 1 :seconds 2 :weeks)
-  (offset? (->Offset nil nil))
-  )
 
 ;; Todo could extend this protocol to offset
 ;; I'm not sure what semantics I want for offset : adding period and duration or just delegating to each one?
@@ -343,73 +134,29 @@
 (def period-units? period-units)
 (def duration-units? duration-units)
 
-(s/def ::opt-map (s/* (s/cat :k keyword? :v any?)))
-
 (def plus-period-fns
   {:days   (fn [d v] (.plusDays #?(:cljs ^js d :clj d) v))
    :months (fn [d v] (.plusMonths #?(:cljs ^js d :clj d) v))
    :years  (fn [d v] (.plusYears #?(:cljs ^js d :clj d) v))})
 
-;; (offset 1 :days (t/new-duration 20 :minutes))
-;; (offset (t/new-period 1 :days) (t/new-duration 20 :minutes))
-;; (offset (t/new-duration 20 :minutes) (t/new-period 1 :days))
-;; etc
-;; (offset (t/new-period 1 :days) 20 :minutes)
-
-(>defn offset
-  "Offset from mix and match units of duration and period"
-  ([val]
-   [(s/or :period period? :duration duration?) => offset?]
-   (cond
-     (period? val) (->Offset val nil nil)
-     (duration? val) (->Offset nil val nil)
-     :else (throw (error "Unsupported type passed to offset: " (pr-str val)))))
-
-  ([val units]
-   [(s/or :int integer? :period period? :duration duration? :nil nil?)
-    (s/or :units offset-units? :period period? :duration duration? :nil nil?) => offset?]
-   (cond
-     (and (duration? val) (nil? units)) (->Offset units val nil)
-     (and (period? val) (nil? units)) (->Offset val units nil)
-     (and (nil? val) (period? units)) (->Offset units val nil)
-     (and (nil? val) (duration? units)) (->Offset val units nil)
-     (and (period? val) (duration? units)) (->Offset val units nil)
-     (and (duration? val) (period? units)) (->Offset units val nil)
-     (and (integer? val) (duration-units? units)) (->Offset nil (t/new-duration val units) nil)
-     (and (integer? val) (period-units? units)) (->Offset (t/new-period val units) nil nil)
-     :else (throw (error (str "Unknown units passed to offset: " units)))))
-
-  ([val units val2 units2]
-   [integer? offset-units? integer? offset-units? => offset?]
-   (let [duration (cond
-                    (duration-units? units) (t/new-duration val units)
-                    (duration-units? units2) (t/new-duration val2 units2))
-         period   (cond
-                    (period-units? units) (t/new-period val units)
-                    (period-units? units2) (t/new-period val2 units2))]
-     (when (and (nil? duration) (nil? period))
-       (throw (error (str "Unknown units passed to offset: " units " and " units2))))
-     (->Offset period duration nil))))
-
 (declare ->date)
 
-(>defn period-seq
+(defn period-seq
   "Starting at 'start' - a tick/date, return lazy seq of dates every `period` units.
   Defaults to today if no date passed."
-  ([period] [period? => seq?] (period-seq period (t/today)))
-
+  ([period] (period-seq period (t/today)))
   ([period start]
-   [period? date-type? => seq?]
+   ;[period? date-type? => seq?]
    (iterate #(t/+ % period) (->date start))))
 
 (comment (take 10 (period-seq (t/new-period 7 :days) (t/date "2020-03-15")))
   ;; similar to range:
   (take 10 (t/range (t/date-time "2020-03-15T00:00") nil (t/new-period 7 :days))))
 
-(>defn dates-in-year-every-period
+(defn dates-in-year-every-period
   "Return a seq of all dates within the year of the "
   [period date]
-  [period? date-type? => seq?]
+  ;[period? date-type? => seq?]
   (if (period? period)
     (let [date (->date date)
           year (t/year date)]
@@ -442,12 +189,12 @@
 (defn ->inst [d]
   (cond
     (date? d) (t/inst (t/at d (t/midnight)))
-    (date-time? d) (t/inst d)
-    (instant? d) (t/inst d)
-    (time? d) (t/at (t/today) d)
-    (inst? d) d
-    (integer? d) (t/instant d)
-    :else (throw (error "Cannot convert " (pr-str d) " to inst."))))
+              (date-time? d) (t/inst d)
+              (instant? d) (t/inst d)
+              (time? d) (t/at (t/today) d)
+              (inst? d) d
+              (integer? d) (t/instant d)
+              :else (throw (error "Cannot convert " (pr-str d) " to inst."))))
 
 (comment (->inst (t/today))
   (->inst (t/now))
@@ -476,17 +223,17 @@
 (defn ->date [v]
   (cond
     (date-time? v) (t/date v)
-    (date? v) v
-    (t/instant? v) (t/date v)
-    (inst? v) (t/date v)
-    (string? v) (t/date v)
-    (t/year-month? v) (.atDay #?(:cljs ^js v :clj v) 1)
-    (t/year? v) (t/new-date (t/int v) 1 1)
-    (integer? v) (t/date (t/instant v))
-    :else
-    (do
-      (log/error (str "Unsupported type passed to ->date: " (pr-str v)))
-      nil)))
+                   (date? v) v
+                   (t/instant? v) (t/date v)
+                   (inst? v) (t/date v)
+                   (string? v) (t/date v)
+                   (t/year-month? v) (.atDay #?(:cljs ^js v :clj v) 1)
+                   (t/year? v) (t/new-date (t/int v) 1 1)
+                   (integer? v) (t/date (t/instant v))
+                   :else
+                   (do
+                     (log/error (str "Unsupported type passed to ->date: " (pr-str v)))
+                     nil)))
 
 (comment
   (->date "2021-09-29")
@@ -495,27 +242,27 @@
 (defn ->date-time [v]
   (cond
     (date-time? v) v
-    (date? v) (t/at v (t/midnight))
-    (instant? v) (t/date-time v)
-    (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
-    (t/year-month? v) (t/at (.atDay #?(:cljs ^js v :clj v) 1) (t/midnight))
-    (inst? v) (t/date-time v)
-    (string? v)
-    (try
-      (t/date-time v)
-      (catch #?(:cljs js/Error :clj java.time.format.DateTimeParseException) e
-        (-> v (t/date) (->date-time))))
-    (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
-    :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
+                   (date? v) (t/at v (t/midnight))
+                   (instant? v) (t/date-time v)
+                   (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
+                   (t/year-month? v) (t/at (.atDay #?(:cljs ^js v :clj v) 1) (t/midnight))
+                   (inst? v) (t/date-time v)
+                   (string? v)
+                   (try
+                     (t/date-time v)
+                     (catch #?(:cljs js/Error :clj java.time.format.DateTimeParseException) e
+                       (-> v (t/date) (->date-time))))
+                   (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
+                   :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
 
 (defn ->time [v]
   (cond
     (date-time? v) (t/time v)
-    (date? v) (t/midnight)
-    (instant? v) (t/time (t/date-time v))
-    (inst? v) (t/time (t/date-time v))
-    (t/year? v) (-> (->date-time v) t/time)
-    :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
+                   (date? v) (t/midnight)
+                   (instant? v) (t/time (t/date-time v))
+                   (inst? v) (t/time (t/date-time v))
+                   (t/year? v) (-> (->date-time v) t/time)
+                   :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
 
 (comment
   (->date-time (t/year))
@@ -886,7 +633,7 @@
   "date - tick/date or similar"
   ([] (last-day-of-month (t/today)))
   ([x]
-   #?(:clj  (.atEndOfMonth (YearMonth/from (->date x)))
+   #?(:clj (.atEndOfMonth (YearMonth/from (->date x)))
       :cljs (.atEndOfMonth ^js (.from YearMonth ^js (->date x))))))
 
 (comment
@@ -1249,101 +996,7 @@
 ;; copied from time-literals lib
 
 ;; period prints first then duration
-(defn print-offset [^Offset o]
-  (let [duration (-duration o)
-        period   (-period o)]
-    (str "#time/offset \"" (if period period "nil") " " (if duration duration "nil") "\"")))
 
-(comment
-  (pr-str (offset (t/new-duration 1 :hours) (t/new-period 2 :days)))
-  (offset (t/new-period 2 :days))
-  (-period (offset (t/new-period 2 :days)))
-  (offset (t/new-duration 2 :minutes))
-  )
-
-#?(:cljs
-   (extend-protocol IPrintWithWriter
-     Offset (-pr-writer [d writer opts] (-write writer (print-offset d)))))
-
-#?(:clj (defmethod print-method Offset [c ^Writer w] (.write w ^String ^String (print-offset c))))
-#?(:clj (defmethod print-dup Offset [c ^Writer w] (.write w ^String (print-offset c))))
-
-(def transit-tag "time/tick")
-
-#?(:cljs (deftype TickHandler []
-           Object
-           (tag [_ v] transit-tag)
-           (rep [_ v] (pr-str v))
-           (stringRep [_ v] nil)))
-
-(def tick-transit-write-handler
-  #?(:cljs (TickHandler.)
-     :clj  (tr/write-handler
-             transit-tag
-             (fn [v] (pr-str v)))))
-
-(def tick-transit-writer-handler-map
-  (reduce
-    (fn [m [k v]] (assoc m k v))
-    {}
-    (partition 2
-      (interleave
-        ;; todo add all the types here
-        [Date DateTime Time Period Duration Instant Offset]
-        (repeat tick-transit-write-handler)))))
-
-;;
-;; (2020-09-01) I'm not sure why but you have to return the code as data instead of being evaluated at read time.
-;; This was figured out by looking at the code for the time-literals library.
-;;
-(defn read-offset-edn
-  "Period is printed first then duration."
-  [offset-str]
-  (let [[period duration] (str/split offset-str #" ")]
-    `(let [period#   (if (= "nil" ~period) nil (. java.time.Period ~'parse ~period))
-           duration# (if (= "nil" ~duration) nil (. java.time.Duration ~'parse ~duration))]
-       (Offset. period# duration# nil))))
-
-#?(:cljs (cljs.reader/register-tag-parser! 'time/offset read-offset-edn))
-
-(defn read-offset-transit
-  "Period is printed first then duration."
-  [offset-str]
-  (let [offset-str (str/replace (str/replace offset-str "#time/offset " "") "\"" "")
-        [period duration] (str/split offset-str #" ")
-        period*    (if (= "nil" period) nil (. java.time.Period parse period))
-        duration*  (if (= "nil" duration) nil (. java.time.Duration parse duration))]
-    (->Offset period* duration* nil)))
-
-(comment
-  (. Period parse "nil")
-
-  (-duration #time/offset"nil PT1H")
-  #time/offset"nil PT1H"
-  (offset (t/new-duration 1 :hours) (t/new-period 2 :days))
-  (offset (t/new-period 2 :days))
-  ;(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} #time/offset "#time/duration\"PT1H\" #time/period\"P2D\"" )
-  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-duration 1 :hours))))
-  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-duration 1 :hours) (t/new-period 2 :days))))
-  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset)} (pr-str (offset (t/new-period 2 :days))))
-  (offset (t/new-duration 1 :hours))
-  (pr-str (t/new-duration 1 :hours)))
-
-(def tick-transit-reader
-  {transit-tag
-   #?(:cljs (fn [v]
-              (if (str/starts-with? v "#time/offset ")
-                (read-offset-transit v)
-                (cljs.reader/read-string {:readers rw/tags} v)))
-      :clj  (tr/read-handler #(clojure.edn/read-string {:readers (assoc rw/tags 'time/offset read-offset-transit)} %))
-      ;:clj (tr/read-handler #(clojure.edn/read-string {:readers rw/tags} %))
-      )})
-
-#?(:clj (defn write-tr [data]
-          (let [out         (ByteArrayOutputStream. 4096)
-                date-writer (tr/writer out :json {:handlers tick-transit-writer-handler-map})]
-            (tr/write date-writer data)
-            (.toString out))))
 ;; clj
 (comment
   (do
@@ -1441,7 +1094,7 @@
   example: (offset (period 1 :days) (duration 9 :hours 10 :minutes))
   -> #time/time 09:10"
   [offset]
-  (let [[hr mins] (duration->hrs-mins-secs (-duration offset))]
+  (let [[hr mins] (duration->hrs-mins-secs (time.offset/-duration offset))]
     (t/new-time hr mins)))
 
 (comment
@@ -1483,9 +1136,9 @@
 ;; todo update to accept singular units minute hour second etc
 ;; mainly for 1 (duration 1 :hour 2 :minutes)
 ;;
-(>defn duration
+(defn duration
   [num units & args]
-  [int? duration-units? (s/* (s/cat :n int? :v duration-units?)) => duration?]
+  ;[int? duration-units? (s/* (s/cat :n int? :v duration-units?)) => duration?]
   (reduce (fn [acc [val units]]
             (if-let [f (get plus-duration-fns units)]
               (f acc val)
@@ -1510,72 +1163,72 @@
 
 (defn +impl
   [v1 v2]
-  [(s/or :time time-type? :offset offset-type? :nil nil?)
-   (s/or :time time-type? :offset offset-type? :nil nil?)
-   =>
-   (s/or :date-time time-type? :offset offset-type?)]
+  ;[(s/or :time time-type? :offset offset-type? :nil nil?)
+  ; (s/or :time time-type? :offset offset-type? :nil nil?)
+  ; =>
+  ; (s/or :date-time time-type? :offset offset-type?)]
   (cond
     (nil? v2) v1
-    (nil? v1) v2
+              (nil? v1) v2
 
-    (or
-      (and (duration? v1) (period? v2))
-      (and (period? v1) (duration? v2)))
-    (offset v1 v2)
+              (or
+                (and (duration? v1) (period? v2))
+                (and (period? v1) (duration? v2)))
+              (time.offset/offset v1 v2)
 
-    (or
-      (and (duration? v1) (duration? v2))
-      (and (period? v1) (period? v2)))
-    (t/+ v1 v2)
+              (or
+                (and (duration? v1) (duration? v2))
+                (and (period? v1) (period? v2)))
+              (t/+ v1 v2)
 
-    (or (and (offset? v1) (offset? v2))
-      (and (offset? v2) (offset? v1)))
-    (add-offset v1 v2)
+              (or (and (time.offset/offset? v1) (time.offset/offset? v2))
+                (and (time.offset/offset? v2) (time.offset/offset? v1)))
+              (time.offset/add-offset v1 v2)
 
-    (and (offset-type? v1) (time-type? v2))
-    (t/+ (->instant v2) v1)
+              (and (time.offset/offset-type? v1) (time-type? v2))
+              (t/+ (->instant v2) v1)
 
-    (and (date? v1) (offset-type? v2))
-    (t/+ (->date-time v1) v2)
+              (and (date? v1) (time.offset/offset-type? v2))
+              (t/+ (->date-time v1) v2)
 
-    (and (date-time? v1) (offset-type? v2))
-    (t/+ v1 v2)
+              (and (date-time? v1) (time.offset/offset-type? v2))
+              (t/+ v1 v2)
 
-    (and (date? v2) (date-time? v2) (offset-type? v1))
-    (t/+ (->date-time v2) v1)
+              (and (date? v2) (date-time? v2) (time.offset/offset-type? v1))
+              (t/+ (->date-time v2) v1)
 
-    (and (date-time? v2) (offset-type? v1))
-    (t/+ v2 v1)
+              (and (date-time? v2) (time.offset/offset-type? v1))
+              (t/+ v2 v1)
 
-    (and (time-type? v1) (offset-type? v2))
-    (t/+ (->instant v1) v2)
+              (and (time-type? v1) (time.offset/offset-type? v2))
+              (t/+ (->instant v1) v2)
 
-    (and (time-type? v1) (offset-type? v2)) (t/+ (->instant v1) v2)
+              (and (time-type? v1) (time.offset/offset-type? v2)) (t/+ (->instant v1) v2)
 
-    (and (period? v1) (offset? v2)) (offset (+ (-period v2) v1) (-duration v2))
-    (and (offset? v1) (period? v2)) (offset (+ (-period v1) v2) (-duration v1))
+              (and (period? v1) (time.offset/offset? v2)) (time.offset/offset (t/+ (time.offset/-period v2) v1) (time.offset/-duration v2))
+              (and (time.offset/offset? v1) (period? v2)) (time.offset/offset (t/+ (time.offset/-period v1) v2) (time.offset/-duration v1))
 
-    (and (offset? v1) (duration? v2)) (offset (-period v1) (+ (-duration v1) v2))
-    (and (duration? v1) (offset? v2)) (offset (-period v2) (+ (-duration v2) v1))
+              (and (time.offset/offset? v1) (duration? v2)) (time.offset/offset (time.offset/-period v1) (t/+ (time.offset/-duration v1) v2))
+              (and (duration? v1) (time.offset/offset? v2)) (time.offset/offset (time.offset/-period v2) (t/+ (time.offset/-duration v2) v1))
 
-    (and (time? v1) (date? v2)) (t/at v2 v1)
-    (and (date? v1) (time? v2)) (t/at v1 v2)
+              (and (time? v1) (date? v2)) (t/at v2 v1)
+              (and (date? v1) (time? v2)) (t/at v1 v2)
 
-    (and (time? v1) (time? v2)) (t/+ v1 (time->duration v2))
+              (and (time? v1) (time? v2)) (t/+ v1 (time->duration v2))
 
-    (and (time? v1) (date-time? v2)) (t/at (t/date v2) (t/+ v1 (time->duration (t/time v2))))
-    (and (date-time? v1) (time? v2)) (t/at (t/date v1) (t/+ v2 (time->duration (t/time v1))))
+              (and (time? v1) (date-time? v2)) (t/at (t/date v2) (t/+ v1 (time->duration (t/time v2))))
+              (and (date-time? v1) (time? v2)) (t/at (t/date v1) (t/+ v2 (time->duration (t/time v1))))
 
-    ;;todo i should add support for & args by using reduce to call + again 2 args at a time.
+              ;;todo i should add support for & args by using reduce to call + again 2 args at a time.
 
-    :else
-    (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " \nvals: " (pr-str v1) ", " (pr-str v2)))))
+              :else
+              (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " \nvals: " (pr-str v1) ", " (pr-str v2)))))
 
 (defn +
   "Add thing without caring about type
   any combination of any two of:
   time-type|date-type|duration|period|offset => one of these input types dependent upon the semantics based on the args."
-  ([] (offset nil (. Duration -ZERO)))
+  ([] (time.offset/offset nil (. Duration -ZERO)))
   ([arg] arg)
   ([arg & args]
    (reduce #(+impl %1 %2) arg args)))
@@ -1608,60 +1261,60 @@
   (+ (period 1 :weeks) (offset 1 :minutes))
   )
 
-(>defn -
+(defn -
   "Subtract things without caring about type
   any combination of any two of:
   time-type|date-type|duration|period|offset => one of these input types dependent upon the semantics based on the args."
   [v1 v2]
-  [(s/or :time time-type? :offset offset-type? :nil nil?)
-   (s/or :time time-type? :offset offset-type? :nil nil?)
-   =>
-   (s/or :date-time time-type? :offset offset-type?)]
+  ;[(s/or :time time-type? :offset offset-type? :nil nil?)
+  ; (s/or :time time-type? :offset offset-type? :nil nil?)
+  ; =>
+  ; (s/or :date-time time-type? :offset offset-type?)]
   (cond
     (nil? v2) v1
-    (nil? v1) v2
-    (or
-      (and (duration? v1) (period? v2))
-      (and (period? v1) (duration? v2)))
-    (offset v1 v2)
-    (or
-      (and (duration? v1) (duration? v2))
-      (and (period? v1) (period? v2)))
-    (t/- v1 v2)
+              (nil? v1) v2
+              (or
+                (and (duration? v1) (period? v2))
+                (and (period? v1) (duration? v2)))
+              (time.offset/offset v1 v2)
+              (or
+                (and (duration? v1) (duration? v2))
+                (and (period? v1) (period? v2)))
+              (t/- v1 v2)
 
-    (and (offset-type? v1) (time-type? v2))
-    (t/- (->instant v2) v1)
+              (and (time.offset/offset-type? v1) (time-type? v2))
+              (t/- (->instant v2) v1)
 
-    (and (date? v1) (offset-type? v2))
-    (t/- (->date-time v1) v2)
+              (and (date? v1) (time.offset/offset-type? v2))
+              (t/- (->date-time v1) v2)
 
-    (and (date-time? v1) (offset-type? v2))
-    (t/- v1 v2)
+              (and (date-time? v1) (time.offset/offset-type? v2))
+              (t/- v1 v2)
 
-    (and (date? v2) (offset-type? v1))
-    (t/- (->date-time v2) v1)
+              (and (date? v2) (time.offset/offset-type? v1))
+              (t/- (->date-time v2) v1)
 
-    (and (date-time? v2) (offset-type? v1))
-    (t/- v2 v1)
+              (and (date-time? v2) (time.offset/offset-type? v1))
+              (t/- v2 v1)
 
-    (and (time-type? v1) (offset-type? v2))
-    (t/- (->instant v1) v2)
+              (and (time-type? v1) (time.offset/offset-type? v2))
+              (t/- (->instant v1) v2)
 
-    (and (time? v1) (time? v2))
-    (t/- (time->duration v1) (time->duration v2))
+              (and (time? v1) (time? v2))
+              (t/- (time->duration v1) (time->duration v2))
 
-    ;; returns a period
-    (and (period? v1) (offset? v2)) (- v1 (-period v2))
+              ;; returns a period
+              (and (period? v1) (offset? v2)) (- v1 (-period v2))
 
-    (and (offset? v1) (period? v2)) (offset (- (-period v1) v2) (-duration v1))
+              (and (offset? v1) (period? v2)) (offset (- (-period v1) v2) (-duration v1))
 
-    ;; returns a duration
-    (and (duration? v1) (offset? v2)) (- v1 (-duration v2))
+              ;; returns a duration
+              (and (duration? v1) (offset? v2)) (- v1 (-duration v2))
 
-    (and (offset? v1) (duration? v2)) (offset (-period v1) (- (-duration v1) v2))
+              (and (offset? v1) (duration? v2)) (offset (-period v1) (- (-duration v1) v2))
 
-    :else
-    (throw (error "Unkown types passed to `-`: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
+              :else
+              (throw (error "Unkown types passed to `-`: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
 
 (comment
   (+ (duration 10 :minutes) (duration 10 :hours))
@@ -1738,15 +1391,15 @@
   (t/in (t/now) "Europe/Paris")
   )
 
-(>defn format-w-time
+(defn format-w-time
   [d]
-  [(s/or :dt date-time? :i inst?) => string?]
+  ;[(s/or :dt date-time? :i inst?) => string?]
   (t/format (t/formatter default-format-w-time) (->date-time d)))
 
-(>defn format-time
+(defn format-time
   "HH:mm"
   [t]
-  [time? => string?]
+  ;[time? => string?]
   (let [hour   (t/hour t)
         minute (t/minute t)]
     ;; You can use (str t) to render the time but it will show highest
@@ -1780,23 +1433,23 @@
   [target d]
   (cond
     (= target d) "Today"
-    (date? d) (weekday-format d)
-    (date-time? d) (weekday-format-w-time d)))
+                 (date? d) (weekday-format d)
+                 (date-time? d) (weekday-format-w-time d)))
 
 ;; todo fix
 (defn format-relative-time [target t]
   "d in relation to target"
   (cond
     (= target t) "Now"
-    (time? t) (format-time t)))
+                 (time? t) (format-time t)))
 
 (defn format-relative
   "d in relation to target"
   [target d]
   (cond
     (and (date? target) (date? d)) (format-relative-date target d)
-    (and (time? target) (time? d)) (format-relative-time target d)
-    :else (throw* "Unsupported types passed to format-relative: " (pr-str target) " " (pr-str d)))
+                                   (and (time? target) (time? d)) (format-relative-time target d)
+                                   :else (throw* "Unsupported types passed to format-relative: " (pr-str target) " " (pr-str d)))
   )
 
 ;(defn period->map
@@ -1824,9 +1477,9 @@
   (defn years [v] (core/years v))
   )
 
-(>defn period
+(defn period
   [num units & args]
-  [int? period-units? (s/* (s/cat :n int? :v period-units?)) => period?]
+  ;[int? period-units? (s/* (s/cat :n int? :v period-units?)) => period?]
   (reduce (fn [acc [val units]]
             (if-let [f (get plus-period-fns units)]
               (f acc val)
@@ -1859,7 +1512,7 @@
           period*   (if (zero? num-days) nil (t/new-period num-days :days))
           duration* (t/- duration1 (t/new-duration num-days :days))
           duration* (if (zero? (t/seconds duration*)) nil duration*)]
-      (->Offset period* duration* nil))))
+      (time.offset/->Offset period* duration* nil))))
 
 (defn period-between
   "Returns a period "
@@ -1969,15 +1622,15 @@
 ;; Form helpers, str-> tick types and back
 ;; duplicated from fulcro-utils to avoid pulling in this ns
 
-(s/def ::str-or-num (s/or :s string? :n number?))
+;(s/def ::str-or-num (s/or :s string? :n number?))
 
 (defn parse-int [int-str]
   #?(:cljs (js/parseInt int-str 10)
-     :clj  (Long/parseLong int-str)))
+     :clj (Long/parseLong int-str)))
 
-(>defn to-int
+(defn to-int
   [str-num]
-  [::str-or-num => (s/or :empty #{""} :n number?)]
+  ;[::str-or-num => (s/or :empty #{""} :n number?)]
   (if (string? str-num)
     (let [v (str/replace str-num #"[^-0-9]" "")]
       (cond-> v
@@ -1987,10 +1640,10 @@
 (comment (to-int "9sss")
   (to-int "-10") (to-int "-0"))
 
-(>defn pos-or-empty
+(defn pos-or-empty
   "Return a number if it is positive or the empty string if i is emptry string."
   [i]
-  [(s/or :s string? :n number?) => ::str-or-num]
+  ;[(s/or :s string? :n number?) => ::str-or-num]
   (if (and (string? i) (empty? i))
     i
     (Math/max 0 (to-int i))))
@@ -2000,7 +1653,7 @@
   [s]
   (let [i (pos-or-empty s)
         i (cond (string? i) ""
-                :else i)]
+                            :else i)]
     (cond-> i (number? i)
       (t/new-period :days))))
 
@@ -2009,8 +1662,8 @@
   [s]
   (let [i (pos-or-empty s)
         i (cond (string? i) ""
-                (zero? i) 1
-                :else i)]
+                            (zero? i) 1
+                            :else i)]
     (cond-> i (number? i)
       (t/new-duration :hours))))
 
