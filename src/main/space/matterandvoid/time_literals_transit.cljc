@@ -48,8 +48,8 @@
                             'time/offset time.offset/read-offset-transit)]
       [(str "t/" (name sym)) (transit/read-handler reader-fn)])))
 
-(comment
-  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset time.offset/read-offset-transit)} (pr-str (time.offset/offset (t/new-duration 1 :hours))))
-  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset time.offset/read-offset-transit)} (pr-str (time.offset/offset (t/new-duration 1 :hours) (t/new-period 2 :days))))
-  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset time.offset/read-offset-transit)} (pr-str (time.offset/offset (t/new-period 2 :days))))
-  (time.offset/offset (t/new-duration 1 :hours)))
+;(comment
+;  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset time.offset/read-offset-transit)} (pr-str (time.offset/offset (t/new-duration 1 :hours))))
+;  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset time.offset/read-offset-transit)} (pr-str (time.offset/offset (t/new-duration 1 :hours) (t/new-period 2 :days))))
+;  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset time.offset/read-offset-transit)} (pr-str (time.offset/offset (t/new-period 2 :days))))
+;  (time.offset/offset (t/new-duration 1 :hours)))
