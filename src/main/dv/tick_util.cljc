@@ -189,12 +189,12 @@
 (defn ->inst [d]
   (cond
     (date? d) (t/inst (t/at d (t/midnight)))
-              (date-time? d) (t/inst d)
-              (instant? d) (t/inst d)
-              (time? d) (t/at (t/today) d)
-              (inst? d) d
-              (integer? d) (t/instant d)
-              :else (throw (error "Cannot convert " (pr-str d) " to inst."))))
+    (date-time? d) (t/inst d)
+    (instant? d) (t/inst d)
+    (time? d) (t/at (t/today) d)
+    (inst? d) d
+    (integer? d) (t/instant d)
+    :else (throw (error "Cannot convert " (pr-str d) " to inst."))))
 
 (comment (->inst (t/today))
   (->inst (t/now))
@@ -223,17 +223,17 @@
 (defn ->date [v]
   (cond
     (date-time? v) (t/date v)
-                   (date? v) v
-                   (t/instant? v) (t/date v)
-                   (inst? v) (t/date v)
-                   (string? v) (t/date v)
-                   (t/year-month? v) (.atDay #?(:cljs ^js v :clj v) 1)
-                   (t/year? v) (t/new-date (t/int v) 1 1)
-                   (integer? v) (t/date (t/instant v))
-                   :else
-                   (do
-                     (log/error (str "Unsupported type passed to ->date: " (pr-str v)))
-                     nil)))
+    (date? v) v
+    (t/instant? v) (t/date v)
+    (inst? v) (t/date v)
+    (string? v) (t/date v)
+    (t/year-month? v) (.atDay #?(:cljs ^js v :clj v) 1)
+    (t/year? v) (t/new-date (t/int v) 1 1)
+    (integer? v) (t/date (t/instant v))
+    :else
+    (do
+      (log/error (str "Unsupported type passed to ->date: " (pr-str v)))
+      nil)))
 
 (comment
   (->date "2021-09-29")
@@ -242,27 +242,27 @@
 (defn ->date-time [v]
   (cond
     (date-time? v) v
-                   (date? v) (t/at v (t/midnight))
-                   (instant? v) (t/date-time v)
-                   (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
-                   (t/year-month? v) (t/at (.atDay #?(:cljs ^js v :clj v) 1) (t/midnight))
-                   (inst? v) (t/date-time v)
-                   (string? v)
-                   (try
-                     (t/date-time v)
-                     (catch #?(:cljs js/Error :clj java.time.format.DateTimeParseException) e
-                       (-> v (t/date) (->date-time))))
-                   (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
-                   :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
+    (date? v) (t/at v (t/midnight))
+    (instant? v) (t/date-time v)
+    (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
+    (t/year-month? v) (t/at (.atDay #?(:cljs ^js v :clj v) 1) (t/midnight))
+    (inst? v) (t/date-time v)
+    (string? v)
+    (try
+      (t/date-time v)
+      (catch #?(:cljs js/Error :clj java.time.format.DateTimeParseException) e
+        (-> v (t/date) (->date-time))))
+    (t/year? v) (t/at (t/new-date (t/int v) 1 1) (t/midnight))
+    :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
 
 (defn ->time [v]
   (cond
     (date-time? v) (t/time v)
-                   (date? v) (t/midnight)
-                   (instant? v) (t/time (t/date-time v))
-                   (inst? v) (t/time (t/date-time v))
-                   (t/year? v) (-> (->date-time v) t/time)
-                   :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
+    (date? v) (t/midnight)
+    (instant? v) (t/time (t/date-time v))
+    (inst? v) (t/time (t/date-time v))
+    (t/year? v) (-> (->date-time v) t/time)
+    :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
 
 (comment
   (->date-time (t/year))
@@ -1169,60 +1169,60 @@
   ; (s/or :date-time time-type? :offset offset-type?)]
   (cond
     (nil? v2) v1
-              (nil? v1) v2
+    (nil? v1) v2
 
-              (or
-                (and (duration? v1) (period? v2))
-                (and (period? v1) (duration? v2)))
-              (time.offset/offset v1 v2)
+    (or
+      (and (duration? v1) (period? v2))
+      (and (period? v1) (duration? v2)))
+    (time.offset/offset v1 v2)
 
-              (or
-                (and (duration? v1) (duration? v2))
-                (and (period? v1) (period? v2)))
-              (t/+ v1 v2)
+    (or
+      (and (duration? v1) (duration? v2))
+      (and (period? v1) (period? v2)))
+    (t/+ v1 v2)
 
-              (or (and (time.offset/offset? v1) (time.offset/offset? v2))
-                (and (time.offset/offset? v2) (time.offset/offset? v1)))
-              (time.offset/add-offset v1 v2)
+    (or (and (time.offset/offset? v1) (time.offset/offset? v2))
+      (and (time.offset/offset? v2) (time.offset/offset? v1)))
+    (time.offset/add-offset v1 v2)
 
-              (and (time.offset/offset-type? v1) (time-type? v2))
-              (t/+ (->instant v2) v1)
+    (and (time.offset/offset-type? v1) (time-type? v2))
+    (t/+ (->instant v2) v1)
 
-              (and (date? v1) (time.offset/offset-type? v2))
-              (t/+ (->date-time v1) v2)
+    (and (date? v1) (time.offset/offset-type? v2))
+    (t/+ (->date-time v1) v2)
 
-              (and (date-time? v1) (time.offset/offset-type? v2))
-              (t/+ v1 v2)
+    (and (date-time? v1) (time.offset/offset-type? v2))
+    (t/+ v1 v2)
 
-              (and (date? v2) (date-time? v2) (time.offset/offset-type? v1))
-              (t/+ (->date-time v2) v1)
+    (and (date? v2) (date-time? v2) (time.offset/offset-type? v1))
+    (t/+ (->date-time v2) v1)
 
-              (and (date-time? v2) (time.offset/offset-type? v1))
-              (t/+ v2 v1)
+    (and (date-time? v2) (time.offset/offset-type? v1))
+    (t/+ v2 v1)
 
-              (and (time-type? v1) (time.offset/offset-type? v2))
-              (t/+ (->instant v1) v2)
+    (and (time-type? v1) (time.offset/offset-type? v2))
+    (t/+ (->instant v1) v2)
 
-              (and (time-type? v1) (time.offset/offset-type? v2)) (t/+ (->instant v1) v2)
+    (and (time-type? v1) (time.offset/offset-type? v2)) (t/+ (->instant v1) v2)
 
-              (and (period? v1) (time.offset/offset? v2)) (time.offset/offset (t/+ (time.offset/-period v2) v1) (time.offset/-duration v2))
-              (and (time.offset/offset? v1) (period? v2)) (time.offset/offset (t/+ (time.offset/-period v1) v2) (time.offset/-duration v1))
+    (and (period? v1) (time.offset/offset? v2)) (time.offset/offset (t/+ (time.offset/-period v2) v1) (time.offset/-duration v2))
+    (and (time.offset/offset? v1) (period? v2)) (time.offset/offset (t/+ (time.offset/-period v1) v2) (time.offset/-duration v1))
 
-              (and (time.offset/offset? v1) (duration? v2)) (time.offset/offset (time.offset/-period v1) (t/+ (time.offset/-duration v1) v2))
-              (and (duration? v1) (time.offset/offset? v2)) (time.offset/offset (time.offset/-period v2) (t/+ (time.offset/-duration v2) v1))
+    (and (time.offset/offset? v1) (duration? v2)) (time.offset/offset (time.offset/-period v1) (t/+ (time.offset/-duration v1) v2))
+    (and (duration? v1) (time.offset/offset? v2)) (time.offset/offset (time.offset/-period v2) (t/+ (time.offset/-duration v2) v1))
 
-              (and (time? v1) (date? v2)) (t/at v2 v1)
-              (and (date? v1) (time? v2)) (t/at v1 v2)
+    (and (time? v1) (date? v2)) (t/at v2 v1)
+    (and (date? v1) (time? v2)) (t/at v1 v2)
 
-              (and (time? v1) (time? v2)) (t/+ v1 (time->duration v2))
+    (and (time? v1) (time? v2)) (t/+ v1 (time->duration v2))
 
-              (and (time? v1) (date-time? v2)) (t/at (t/date v2) (t/+ v1 (time->duration (t/time v2))))
-              (and (date-time? v1) (time? v2)) (t/at (t/date v1) (t/+ v2 (time->duration (t/time v1))))
+    (and (time? v1) (date-time? v2)) (t/at (t/date v2) (t/+ v1 (time->duration (t/time v2))))
+    (and (date-time? v1) (time? v2)) (t/at (t/date v1) (t/+ v2 (time->duration (t/time v1))))
 
-              ;;todo i should add support for & args by using reduce to call + again 2 args at a time.
+    ;;todo i should add support for & args by using reduce to call + again 2 args at a time.
 
-              :else
-              (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " \nvals: " (pr-str v1) ", " (pr-str v2)))))
+    :else
+    (throw (error "Unkown types passed to +: " (type v1) ", " (type v2) " \nvals: " (pr-str v1) ", " (pr-str v2)))))
 
 (defn +
   "Add thing without caring about type
@@ -1272,49 +1272,49 @@
   ; (s/or :date-time time-type? :offset offset-type?)]
   (cond
     (nil? v2) v1
-              (nil? v1) v2
-              (or
-                (and (duration? v1) (period? v2))
-                (and (period? v1) (duration? v2)))
-              (time.offset/offset v1 v2)
-              (or
-                (and (duration? v1) (duration? v2))
-                (and (period? v1) (period? v2)))
-              (t/- v1 v2)
+    (nil? v1) v2
+    (or
+      (and (duration? v1) (period? v2))
+      (and (period? v1) (duration? v2)))
+    (time.offset/offset v1 v2)
+    (or
+      (and (duration? v1) (duration? v2))
+      (and (period? v1) (period? v2)))
+    (t/- v1 v2)
 
-              (and (time.offset/offset-type? v1) (time-type? v2))
-              (t/- (->instant v2) v1)
+    (and (time.offset/offset-type? v1) (time-type? v2))
+    (t/- (->instant v2) v1)
 
-              (and (date? v1) (time.offset/offset-type? v2))
-              (t/- (->date-time v1) v2)
+    (and (date? v1) (time.offset/offset-type? v2))
+    (t/- (->date-time v1) v2)
 
-              (and (date-time? v1) (time.offset/offset-type? v2))
-              (t/- v1 v2)
+    (and (date-time? v1) (time.offset/offset-type? v2))
+    (t/- v1 v2)
 
-              (and (date? v2) (time.offset/offset-type? v1))
-              (t/- (->date-time v2) v1)
+    (and (date? v2) (time.offset/offset-type? v1))
+    (t/- (->date-time v2) v1)
 
-              (and (date-time? v2) (time.offset/offset-type? v1))
-              (t/- v2 v1)
+    (and (date-time? v2) (time.offset/offset-type? v1))
+    (t/- v2 v1)
 
-              (and (time-type? v1) (time.offset/offset-type? v2))
-              (t/- (->instant v1) v2)
+    (and (time-type? v1) (time.offset/offset-type? v2))
+    (t/- (->instant v1) v2)
 
-              (and (time? v1) (time? v2))
-              (t/- (time->duration v1) (time->duration v2))
+    (and (time? v1) (time? v2))
+    (t/- (time->duration v1) (time->duration v2))
 
-              ;; returns a period
-              (and (period? v1) (offset? v2)) (- v1 (-period v2))
+    ;; returns a period
+    (and (period? v1) (offset? v2)) (- v1 (-period v2))
 
-              (and (offset? v1) (period? v2)) (offset (- (-period v1) v2) (-duration v1))
+    (and (offset? v1) (period? v2)) (offset (- (-period v1) v2) (-duration v1))
 
-              ;; returns a duration
-              (and (duration? v1) (offset? v2)) (- v1 (-duration v2))
+    ;; returns a duration
+    (and (duration? v1) (offset? v2)) (- v1 (-duration v2))
 
-              (and (offset? v1) (duration? v2)) (offset (-period v1) (- (-duration v1) v2))
+    (and (offset? v1) (duration? v2)) (offset (-period v1) (- (-duration v1) v2))
 
-              :else
-              (throw (error "Unkown types passed to `-`: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
+    :else
+    (throw (error "Unkown types passed to `-`: " (type v1) ", " (type v2) " vals: " v1 ", " v2))))
 
 (comment
   (+ (duration 10 :minutes) (duration 10 :hours))
@@ -1433,23 +1433,23 @@
   [target d]
   (cond
     (= target d) "Today"
-                 (date? d) (weekday-format d)
-                 (date-time? d) (weekday-format-w-time d)))
+    (date? d) (weekday-format d)
+    (date-time? d) (weekday-format-w-time d)))
 
 ;; todo fix
 (defn format-relative-time [target t]
   "d in relation to target"
   (cond
     (= target t) "Now"
-                 (time? t) (format-time t)))
+    (time? t) (format-time t)))
 
 (defn format-relative
   "d in relation to target"
   [target d]
   (cond
     (and (date? target) (date? d)) (format-relative-date target d)
-                                   (and (time? target) (time? d)) (format-relative-time target d)
-                                   :else (throw* "Unsupported types passed to format-relative: " (pr-str target) " " (pr-str d)))
+    (and (time? target) (time? d)) (format-relative-time target d)
+    :else (throw* "Unsupported types passed to format-relative: " (pr-str target) " " (pr-str d)))
   )
 
 ;(defn period->map
@@ -1653,7 +1653,7 @@
   [s]
   (let [i (pos-or-empty s)
         i (cond (string? i) ""
-                            :else i)]
+                :else i)]
     (cond-> i (number? i)
       (t/new-period :days))))
 
@@ -1662,8 +1662,8 @@
   [s]
   (let [i (pos-or-empty s)
         i (cond (string? i) ""
-                            (zero? i) 1
-                            :else i)]
+                (zero? i) 1
+                :else i)]
     (cond-> i (number? i)
       (t/new-duration :hours))))
 

@@ -1,14 +1,8 @@
 {:paths   ["src/main"]
 
  :deps    {org.clojure/clojure        {:mvn/version "1.10.3"}
-           org.clojure/spec.alpha     {:mvn/version "0.2.194"}
            com.taoensso/timbre        {:mvn/version "5.1.2"}
-           com.taoensso/tufte         {:mvn/version "2.2.0"}
-           com.fulcrologic/guardrails {:mvn/version "1.1.7"}
-           tick/tick                  {:mvn/version "0.5.0-RC5"}
-
-           com.cognitect/transit-cljs {:mvn/version "0.8.269"}
-           com.cognitect/transit-clj  {:mvn/version "1.0.324"}}
+           com.taoensso/tufte         {:mvn/version "2.2.0"}}
 
  :aliases {:test      {:extra-paths ["src/test"]
                        :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}}}
