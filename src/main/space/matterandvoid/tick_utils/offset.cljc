@@ -99,21 +99,31 @@
      (and (integer? val) (period-units? units)) (->Offset (t/new-period val units) nil nil)
      :else (throw (error (str "Unknown units passed to offset: " units)))))
 
-  ([val units val2 units2]
-   ;[integer? offset-units? integer? offset-units? => offset?]
-   (let [duration (cond
-                    (duration-units? units) (t/new-duration val units)
-                    (duration-units? units2) (t/new-duration val2 units2))
-         period   (cond
-                    (period-units? units) (t/new-period val units)
-                    (period-units? units2) (t/new-period val2 units2))]
-     (when (and (nil? duration) (nil? period))
-       (throw (error (str "Unknown units passed to offset: " units " and " units2))))
-     (->Offset period duration nil))))
+  ([val units & others]
+   (let [{period-vals true duration-vals false}
+         (group-by (fn [[_ u]] (contains? period-units u)) (partition 2 (list* val units others)))
+         p-units (map second period-vals)
+         d-units (map second duration-vals)]
+     (assert (every? period-units? p-units) (str "Unknown period units passed to offset: " (pr-str p-units)))
+     (assert (every? duration-units? d-units) (str "Unknown duration units passed to offset: " (pr-str d-units)))
+     (let [p (reduce
+               (fn [ac [v u]] (t/+ ac (t/new-period v u)))
+               (t/new-period 0 :days)
+               period-vals)
+           d (reduce
+               (fn [ac [v u]] (t/+ ac (t/new-duration v u)))
+               (t/new-duration 0 :seconds)
+               duration-vals)]
+       (->Offset p d nil)))))
 
 (comment
-  (offset 5 :hours)
-  )
+  (offset (t/new-period 100 :years) (t/new-duration 10 :minutes))
+  (offset (t/new-duration 10 :minutes) (t/new-period 100 :years))
+  (offset 7 :hours 30 :minutes)
+  ;; should throw:
+  (offset 10 :days 2 :hours 40 :minutes 30 :seconds 10 :thirds)
+  (offset 10 :days 2 :hours 40 :minutes 30 :seconds)
+  (offset 5 :hours))
 
 (defn -period [offset] (.-period ^{:tag #?(:cljs clj :clj Offset)} offset))
 (defn -duration [offset] (.-duration ^{:tag #?(:cljs clj :clj Offset)} offset))

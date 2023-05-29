@@ -10,7 +10,7 @@
     [clojure.set :as set]
     [clojure.string :as str]
     [cognitect.transit :as tr]
-    [space.matterandvoid.tick-utils.offset :as time.offset :refer [offset? -period offset -duration]]
+    [space.matterandvoid.tick-utils.offset :as time.offset ]
     [tick.core :as t]
     [tick.alpha.interval :as t.i]
     [tick.protocols :refer [ITimeComparison ITimeArithmetic]]
@@ -104,8 +104,13 @@
 (def date-type? (some-fn inst? instant? date? date-time?))
 (def time-type? (some-fn inst? instant? time? date? date-time?))
 
+(def Offset (time.offset/get-offset-class))
+(def offset  time.offset/offset)
+(def -period time.offset/-period)
+(def -duration time.offset/-duration)
 
-
+(def offset? time.offset/offset?)
+(def offset-type? time.offset/offset-type?)
 
 ;; Todo could extend this protocol to offset
 ;; I'm not sure what semantics I want for offset : adding period and duration or just delegating to each one?
