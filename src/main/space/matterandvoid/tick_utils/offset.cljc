@@ -82,31 +82,31 @@
    ;[(s/or :period period? :duration duration?) => offset?]
    (cond
      (t/period? val) (->Offset val nil nil)
-                     (t/duration? val) (->Offset nil val nil)
-                     :else (throw (error "Unsupported type passed to offset: " (pr-str val)))))
+     (t/duration? val) (->Offset nil val nil)
+     :else (throw (error "Unsupported type passed to offset: " (pr-str val)))))
 
   ([val units]
    ;[(s/or :int integer? :period period? :duration duration? :nil nil?)
    ; (s/or :units offset-units? :period period? :duration duration? :nil nil?) => offset?]
    (cond
      (and (t/duration? val) (nil? units)) (->Offset units val nil)
-                                          (and (t/period? val) (nil? units)) (->Offset val units nil)
-                                          (and (nil? val) (t/period? units)) (->Offset units val nil)
-                                          (and (nil? val) (t/duration? units)) (->Offset val units nil)
-                                          (and (t/period? val) (t/duration? units)) (->Offset val units nil)
-                                          (and (t/duration? val) (t/period? units)) (->Offset units val nil)
-                                          (and (integer? val) (duration-units? units)) (->Offset nil (t/new-duration val units) nil)
-                                          (and (integer? val) (period-units? units)) (->Offset (t/new-period val units) nil nil)
-                                          :else (throw (error (str "Unknown units passed to offset: " units)))))
+     (and (t/period? val) (nil? units)) (->Offset val units nil)
+     (and (nil? val) (t/period? units)) (->Offset units val nil)
+     (and (nil? val) (t/duration? units)) (->Offset val units nil)
+     (and (t/period? val) (t/duration? units)) (->Offset val units nil)
+     (and (t/duration? val) (t/period? units)) (->Offset units val nil)
+     (and (integer? val) (duration-units? units)) (->Offset nil (t/new-duration val units) nil)
+     (and (integer? val) (period-units? units)) (->Offset (t/new-period val units) nil nil)
+     :else (throw (error (str "Unknown units passed to offset: " units)))))
 
   ([val units val2 units2]
    ;[integer? offset-units? integer? offset-units? => offset?]
    (let [duration (cond
                     (duration-units? units) (t/new-duration val units)
-                                            (duration-units? units2) (t/new-duration val2 units2))
+                    (duration-units? units2) (t/new-duration val2 units2))
          period   (cond
                     (period-units? units) (t/new-period val units)
-                                          (period-units? units2) (t/new-period val2 units2))]
+                    (period-units? units2) (t/new-period val2 units2))]
      (when (and (nil? duration) (nil? period))
        (throw (error (str "Unknown units passed to offset: " units " and " units2))))
      (->Offset period duration nil))))
@@ -128,11 +128,11 @@
   {:malli/schema [:=> [:cat [::period-or-duration ::period-or-duration]] [:maybe ::offest]]}
   (cond
     (and (t/duration? v1) (or (t/period? v2) (nil? v2))) [v2 v1]
-                                                         (and (or (t/period? v1) (nil? v1)) (t/duration? v2)) [v1 v2]
+    (and (or (t/period? v1) (nil? v1)) (t/duration? v2)) [v1 v2]
 
-                                                         (and (or (t/duration? v1) (nil? v1)) (t/period? v2)) [v2 v1]
-                                                         (and (t/period? v1) (or (t/duration? v2) (nil? v2))) [v1 v2]
-                                                         :else nil))
+    (and (or (t/duration? v1) (nil? v1)) (t/period? v2)) [v2 v1]
+    (and (t/period? v1) (or (t/duration? v2) (nil? v2))) [v1 v2]
+    :else nil))
 
 (defn add-offset*
   [d ^Offset offset]
@@ -225,19 +225,19 @@
   (+ [t d]
     (cond
       (nil? d) t
-               (nil? t) d
-               (offset? d)
-               (add-offset t d)
-               :else
-               (.plus ^{:tag #?(:cljs clj :clj Object)} t d)))
+      (nil? t) d
+      (offset? d)
+      (add-offset t d)
+      :else
+      (.plus ^{:tag #?(:cljs clj :clj Object)} t d)))
   (- [t d]
     (cond
       (nil? d) t
-               (nil? t) d
-               (offset? d)
-               (subtract-offset t d)
-               :else
-               (.minus ^{:tag #?(:cljs clj :clj Object)} t d))))
+      (nil? t) d
+      (offset? d)
+      (subtract-offset t d)
+      :else
+      (.minus ^{:tag #?(:cljs clj :clj Object)} t d))))
 
 #?(:clj
    (nippy/extend-freeze Offset :dv.tick-util/offset
