@@ -10,7 +10,7 @@
     [clojure.set :as set]
     [clojure.string :as str]
     [cognitect.transit :as tr]
-    [space.matterandvoid.tick-utils.offset :as time.offset ]
+    [space.matterandvoid.tick-utils.offset :as time.offset]
     [tick.core :as t]
     [tick.alpha.interval :as t.i]
     [tick.protocols :refer [ITimeComparison ITimeArithmetic]]
@@ -105,7 +105,7 @@
 (def time-type? (some-fn inst? instant? time? date? date-time?))
 
 (def Offset (time.offset/get-offset-class))
-(def offset  time.offset/offset)
+(def offset time.offset/offset)
 (def -period time.offset/-period)
 (def -duration time.offset/-duration)
 
@@ -197,6 +197,16 @@
     (date-time? d) (t/inst d)
     (instant? d) (t/inst d)
     (time? d) (t/at (t/today) d)
+    (inst? d) d
+    (integer? d) (t/instant d)
+    :else (throw (error "Cannot convert " (pr-str d) " to inst."))))
+
+(defn ->zinst [d]
+  (cond
+    (date? d) (t/inst (t/in (t/at d (t/midnight)) "UTC"))
+    (date-time? d) (t/inst (t/in d "UTC"))
+    (instant? d) (t/inst d)
+    (time? d) (t/in (t/at (t/today) d) "UTC")
     (inst? d) d
     (integer? d) (t/instant d)
     :else (throw (error "Cannot convert " (pr-str d) " to inst."))))
