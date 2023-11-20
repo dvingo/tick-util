@@ -1100,6 +1100,11 @@
 
     [hours minutes seconds]))
 
+(defn duration->time
+  [d]
+  (let [[hrs mins secs] (duration->hrs-mins-secs d)]
+    (t/new-time hrs mins secs)))
+
 (comment
   (duration->hrs-mins-secs (duration 1 :hours 10 :minutes 5 :seconds))
   (duration 1 :hours 10 :minutes 5 :seconds)
@@ -1173,7 +1178,8 @@
 (defn time->duration
   "Given a time object return a duration."
   [t]
-  (duration (t/hour t) :hours (t/minute t) :minutes (t/second t) :seconds))
+  (let [t' (->time t)]
+    (duration (t/hour t') :hours (t/minute t') :minutes (t/second t') :seconds)))
 
 (comment (time->duration #time/time "13:34"))
 
