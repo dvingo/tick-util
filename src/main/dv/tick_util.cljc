@@ -276,6 +276,7 @@
     (date? v) (t/midnight)
     (instant? v) (t/time (t/date-time v))
     (inst? v) (t/time (t/date-time v))
+    (string? v) (t/time v)
     (t/year? v) (-> (->date-time v) t/time)
     :else (throw (error (str "Unsupported type passed to ->date-time: " (pr-str v))))))
 
@@ -1412,7 +1413,8 @@
   (t/format (t/formatter default-format-w-time) (->date-time d)))
 
 (defn format-time
-  "HH:mm"
+  "Expects time input, does not coerce argument,
+  returns a 5 character string: HH:mm"
   [t]
   ;[time? => string?]
   (let [hour   (t/hour t)
