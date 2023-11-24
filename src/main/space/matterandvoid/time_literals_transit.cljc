@@ -1,16 +1,15 @@
 (ns space.matterandvoid.time-literals-transit
   (:require
-    [clojure.string :as str]
     [cognitect.transit :as transit]
     #?(:cljs
        [java.time :refer
         [Period LocalDate LocalDateTime ZonedDateTime OffsetTime OffsetDateTime
          Instant ZoneId DayOfWeek LocalTime Month MonthDay Duration Year YearMonth]])
-    [tick.core :as t]
     [time-literals.read-write :as rw]
     [space.matterandvoid.tick-utils.offset :as time.offset])
   #?(:clj (:import [java.io
                     ByteArrayInputStream ByteArrayOutputStream Writer]
+                   [space.matterandvoid.tick_utils.offset Offset]
                    [java.time
                     Period LocalDate LocalDateTime ZonedDateTime OffsetTime
                     OffsetDateTime Instant ZoneId DayOfWeek LocalTime Month MonthDay Duration Year YearMonth])))
@@ -30,7 +29,7 @@
    'offset-date-time OffsetDateTime
    'duration         Duration
    'period           Period
-   'offset           (time.offset/get-offset-class)
+   'offset           #?(:clj Offset :cljs time.offset/Offset)
    'year             Year
    'year-month       YearMonth
    'day-of-week      DayOfWeek
@@ -47,6 +46,23 @@
     (for [[sym reader-fn] (assoc time-literals.read-write/tags
                             'time/offset time.offset/read-offset-transit)]
       [(str "t/" (name sym)) (transit/read-handler reader-fn)])))
+
+;(comment
+;  ;; cljs test
+;  (defn round-it [d]
+;    (let [reader (transit/reader :json-verbose {:handlers read-handlers})
+;          writer (transit/writer :json-verbose {:handlers write-handlers})]
+;      (->> d
+;        (transit/write writer)
+;        (transit/read reader))))
+;  (transit/read
+;    (transit/reader :json-verbose {:handlers read-handlers})
+;    (transit/write
+;      (transit/writer :json-verbose {:handlers write-handlers})
+;      (time.offset/offset 10 :days 20 :seconds)
+;      ))
+;  (round-it (time.offset/offset 10 :days))
+;  )
 
 ;(comment
 ;  (clojure.edn/read-string {:readers (assoc rw/tags 'time/offset time.offset/read-offset-transit)} (pr-str (time.offset/offset (t/new-duration 1 :hours))))

@@ -14,7 +14,6 @@
     [tick.core :as t]
     [tick.alpha.interval :as t.i]
     [tick.protocols :refer [ITimeComparison ITimeArithmetic]]
-    [tick.locale-en-us]
     #?(:clj [taoensso.nippy :as nippy])
     [taoensso.timbre :as log])
   #?(:clj (:import
@@ -111,6 +110,9 @@
 
 (def offset? time.offset/offset?)
 (def offset-type? time.offset/offset-type?)
+
+(def offset-with-period time.offset/with-period)
+(def offset-with-duration time.offset/with-duration)
 
 ;; Todo could extend this protocol to offset
 ;; I'm not sure what semantics I want for offset : adding period and duration or just delegating to each one?

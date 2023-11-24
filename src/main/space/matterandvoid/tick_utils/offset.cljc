@@ -185,6 +185,12 @@
       (+ (-period v1) (-period v2))
       (+ (-duration v1) (-duration v2)))))
 
+(defn with-period [offset' period]
+  (offset period (-duration offset')))
+
+(defn with-duration [offset' duration]
+  (offset (-period offset') duration))
+
 (comment
   (add-offset (t/date) (offset 2 :days 5 :minutes))
   (add-offset (offset 2 :days 5 :minutes) (offset 2 :days 5 :minutes))
