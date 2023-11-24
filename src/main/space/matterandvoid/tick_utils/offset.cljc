@@ -1,7 +1,7 @@
 (ns space.matterandvoid.tick-utils.offset
   (:refer-clojure :exclude [< > >= <= + - format time])
   (:require
-    #?(:cljs [cljs.reader] :clj [clojure.edn])
+    #?(:cljs [cljs.reader])
     #?(:clj [taoensso.nippy :as nippy])
     [clojure.string :as str]
     [clojure.set :as set]

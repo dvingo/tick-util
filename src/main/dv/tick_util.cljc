@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [< > >= <= + - format time])
   #?(:cljs (:require-macros [dv.tick-util]))
   (:require
-    #?(:cljs [cljs.reader] :clj [clojure.edn])
+    ;#?(:cljs [cljs.reader] :clj [clojure.edn])
     #?(:cljs [java.time :refer
               [Period LocalDate LocalDateTime ZonedDateTime OffsetTime
                Instant OffsetDateTime ZoneId DayOfWeek
@@ -1059,7 +1059,7 @@
 ;; cljs
 (comment
   "{\"~:task/scheduled-at\":{\"~#time/tick\":\"#time/offset \"P0D PT9H\"\"}}"
-  (clojure.edn/read-string "[\"hello world\"]")
+  ;(clojure.edn/read-string "[\"hello world\"]")
   (def date-reader (tr/reader :json {:handlers tick-transit-reader}))
   (def date-writer (tr/writer :json {:handlers tick-transit-writer-handler-map}))
   (tr/read date-reader (tr/write date-writer (t/today)))
