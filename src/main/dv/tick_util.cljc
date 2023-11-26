@@ -155,7 +155,6 @@
   Defaults to today if no date passed."
   ([period] (period-seq period (t/today)))
   ([period start]
-   ;[period? date-type? => seq?]
    (iterate #(t/+ % period) (->date start)))
   ([period start end]
    (let [end' (->date end)]
