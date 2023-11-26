@@ -146,17 +146,25 @@
    :months (fn [d v] (.plusMonths #?(:cljs ^js d :clj d) v))
    :years  (fn [d v] (.plusYears #?(:cljs ^js d :clj d) v))})
 
-(declare ->date)
+(declare ->date <)
 
 (defn period-seq
-  "Starting at 'start' - a tick/date, return lazy seq of dates every `period` units.
+  "Starting at 'start' - a value coerced to a LocalDate, returns a lazy seq of dates every `period` units.
+  If `end` is provided the seq will terminate when the sequence passes `end`.
+
   Defaults to today if no date passed."
   ([period] (period-seq period (t/today)))
   ([period start]
    ;[period? date-type? => seq?]
-   (iterate #(t/+ % period) (->date start))))
+   (iterate #(t/+ % period) (->date start)))
+  ([period start end]
+   (let [end' (->date end)]
+     (take-while #(< % end') (period-seq period start)))))
 
-(comment (take 10 (period-seq (t/new-period 7 :days) (t/date "2020-03-15")))
+(comment
+  (period-seq (t/new-period 7 :days) (t/date "2020-03-15") (t/date "2020-04-16"))
+  (t/+ (t/today) (t/new-period 6 :days))
+  (take 10 (period-seq (t/new-period 7 :days) (t/date "2020-03-15")))
   ;; similar to range:
   (take 10 (t/range (t/date-time "2020-03-15T00:00") nil (t/new-period 7 :days))))
 
