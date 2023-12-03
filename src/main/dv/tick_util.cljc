@@ -7,6 +7,7 @@
               [Period LocalDate LocalDateTime ZonedDateTime OffsetTime
                Instant OffsetDateTime ZoneId DayOfWeek
                LocalTime Month Duration Year YearMonth]])
+    [clojure.core :as c]
     [clojure.set :as set]
     [clojure.string :as str]
     [cognitect.transit :as tr]
@@ -219,6 +220,36 @@
     (inst? d) d
     (integer? d) (t/instant d)
     :else (throw (error "Cannot convert " (pr-str d) " to inst."))))
+
+(defn local-date->ymd-long
+  "Takes a java.time.LocalDate and encodes the LocalDate in a long in the format YYYYMMDD"
+  [d]
+  (when d
+    (let [d            ^LocalDate d
+          year         (.getYear d)
+          month        (.getMonthValue d)
+          day-of-month (.getDayOfMonth d)]
+      #?(:clj
+         (c/+
+           (* ^int year 10000)
+           (* ^int month 100)
+           ^int day-of-month)
+         :cljs
+         (c/+
+           (* year 10000)
+           (* month 100)
+           day-of-month)))))
+
+(defn ymd-long->local-date
+  "Takes a long in the format YYYYMMDD and returns the equivalent LocalDate value."
+  [v]
+  (when v
+    (let [v #?(:clj ^long v :cljs ^number v)
+          year            (long (/ v 10000))
+          month           (long (/ (mod v 10000) 100))
+          day-of-month    (mod v 100)]
+      #?(:clj (t/new-date ^long year ^long month ^long day-of-month)
+         :cljs (t/new-date year month day-of-month)))))
 
 (comment (->inst (t/today))
   (->inst (t/now))
