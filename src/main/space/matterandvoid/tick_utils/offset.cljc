@@ -6,6 +6,8 @@
     [clojure.string :as str]
     [clojure.set :as set]
     [tick.core :as t]
+    [cljc.java-time.period :as j.period]
+    [cljc.java-time.duration :as j.duration]
     [tick.protocols :refer [ITimeComparison ITimeArithmetic]])
   #?(:clj (:import [java.io Writer])))
 
@@ -76,11 +78,33 @@
 (def period-units? period-units)
 (def duration-units? duration-units)
 
+(defn parse
+  "Takes a string in the format of a string representing a period and one representing a duration, parses them and
+  returns a new Offset object. Each part of the string can be the string literal \"nil\" which is parsed as a clojure nil.
+  <ISO-8601 Period> <ISO-8601 Duration>"
+  [val]
+  (when val
+    (let [[period-str duration-str] (str/split val #" ")
+          period (if (= "nil" period-str) nil (j.period/parse period-str))
+          duration (if (= "nil" duration-str) nil (j.duration/parse duration-str))]
+      (offset period duration))))
+
+(comment
+  (str (offset 10 :days 20 :minutes))
+  (parse (str (offset 10 :days)))
+  (parse (str (offset 10 :days 1 :years 20 :minutes)))
+  (parse-offset (str (offset  20 :minutes)))
+  (j.period/parse (first (parse-offset (str (offset 10 :days)))))
+  (j.duration/parse (second (parse-offset (str (offset 10 :days)))))
+  (parse-offset "")
+  )
+
 (defn offset
   "Offset from mix and match units of duration and period"
   ([val]
    ;[(s/or :period period? :duration duration?) => offset?]
    (cond
+     (string? val) (parse val)
      (t/period? val) (->Offset val nil nil)
      (t/duration? val) (->Offset nil val nil)
      :else (throw (error "Unsupported type passed to offset: " (pr-str val)))))
