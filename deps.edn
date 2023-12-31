@@ -5,7 +5,11 @@
            com.taoensso/tufte         {:mvn/version "2.2.0"}}
 
  :aliases {:test      {:extra-paths ["src/test"]
-                       :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}}}
+                       :extra-deps {org.clojure/test.check     {:mvn/version "1.1.1"}
+                                    com.cognitect/transit-clj  {:mvn/version "1.0.333"}
+                                    com.cognitect/transit-cljs {:mvn/version "0.8.280"}
+                                    com.taoensso/nippy         {:mvn/version "3.2.0"}
+                                    tick/tick                  {:mvn/version "0.6.2"}}}
            :clj-tests {:main-opts  ["-m" "kaocha.runner"]
                        :extra-deps {lambdaisland/kaocha {:mvn/version "1.60.945"}}}
 
@@ -14,15 +18,19 @@
                                      org.clojure/clojurescript {:mvn/version "1.10.893"}}
                        :main-opts   ["-m" "cljs-test-runner.main" "-x" "node" "-d" "src/test"]}
 
-           :jar       {:replace-deps {seancorfield/depstar {:mvn/version "2.0.165"}}
-                       :exec-fn      hf.depstar/jar
-                       :exec-args    {:jar "dv.tick-util.jar"}}
+           ;:jar       {:replace-deps {seancorfield/depstar {:mvn/version "2.0.165"}}
+           ;            :exec-fn      hf.depstar/jar
+           ;            :exec-args    {:jar "dv.tick-util.jar"}}
 
            :install   {:extra-deps {deps-deploy/deps-deploy {:mvn/version "0.0.12"}}
                        :main-opts  ["-m" "deps-deploy.deps-deploy" "install" "dv.tick-util.jar"]}
 
-           :deploy    {:extra-deps {deps-deploy/deps-deploy {:mvn/version "0.0.12"}}
-                       :main-opts  ["-m" "deps-deploy.deps-deploy" "deploy" "dv.tick-util.jar"]}
+           :build {:deps {io.github.clojure/tools.build {:mvn/version "0.9.6"}
+                          slipset/deps-deploy {:mvn/version "0.2.0"}}
+                   :ns-default build}
+
+           ;:deploy    {:extra-deps {deps-deploy/deps-deploy {:mvn/version "0.0.12"}}
+           ;            :main-opts  ["-m" "deps-deploy.deps-deploy" "deploy" "dv.tick-util.jar"]}
 
            :dev       {:extra-paths ["src/test"]
                        :jvm-opts    ["-XX:-OmitStackTraceInFastThrow"]

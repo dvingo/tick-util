@@ -10,13 +10,17 @@
     [tick.alpha.interval :as t.i]
     [tick.core :as t]))
 
+(deftest local-date-to-long-codec-test
+  (is (= 20231230 (tu/local-date->ymd-long (t/date "2023-12-30"))))
+  (is (= (t/date "2023-12-30") (tu/ymd-long->local-date 20231230))))
+
 (deftest time-test
   (is (tu/time? (t/time)))
   (is (not (tu/time? (t/now))))
   (is (not (tu/time? (t/inst)))))
 
 (deftest offset-test
-  (is (= #time/offset "nil PT5H") (tu/offset 5 :hours)))
+  (is (= #time/offset "nil PT5H" (tu/offset 5 :hours))))
 
 (deftest last-day-of-month-test
   (is (= #time/month "JANUARY"

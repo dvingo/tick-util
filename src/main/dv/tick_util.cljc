@@ -224,17 +224,21 @@
 (defn local-date->ymd-long
   "Takes a java.time.LocalDate and encodes the LocalDate in a long in the format YYYYMMDD"
   [d]
-  (when d
-    (let [d            ^LocalDate d
-          year         (.getYear d)
-          month        (.getMonthValue d)
-          day-of-month (.getDayOfMonth d)]
-      #?(:clj
-         (c/+
-           (* ^int year 10000)
-           (* ^int month 100)
-           ^int day-of-month)
-         :cljs
+  #?(:clj (when d
+            (let [d ^LocalDate d
+                   year ^int (.getYear d)
+                   month ^int (.getMonthValue d)
+                   day-of-month ^int (.getDayOfMonth d)]
+              (c/+
+                (* year 10000)
+                (* month 100)
+                day-of-month)))
+     :cljs
+     (when d
+       (let [d ^LocalDate d
+             year (.getYear d)
+             month (.getMonthValue d)
+             day-of-month (.getDayOfMonth d)]
          (c/+
            (* year 10000)
            (* month 100)
@@ -243,13 +247,18 @@
 (defn ymd-long->local-date
   "Takes a long in the format YYYYMMDD and returns the equivalent LocalDate value."
   [v]
-  (when v
-    (let [v #?(:clj ^long v :cljs ^number v)
-          year            (long (/ v 10000))
-          month           (long (/ (mod v 10000) 100))
-          day-of-month    (mod v 100)]
-      #?(:clj (t/new-date ^long year ^long month ^long day-of-month)
-         :cljs (t/new-date year month day-of-month)))))
+  #?(:clj (when v
+            (let [v ^long v
+                  year ^long (long (/ v 10000))
+                  month ^long (long (/ (mod v 10000) 100))
+                  day-of-month ^long (mod v 100)]
+              (t/new-date year month day-of-month)))
+     :cljs (when v
+             (let [v ^number v
+             year            (long (/ v 10000))
+             month           (long (/ (mod v 10000) 100))
+             day-of-month    (mod v 100)]
+               (t/new-date year month day-of-month)))))
 
 (comment (->inst (t/today))
   (->inst (t/now))
