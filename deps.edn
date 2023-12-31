@@ -18,19 +18,12 @@
                                      org.clojure/clojurescript {:mvn/version "1.10.893"}}
                        :main-opts   ["-m" "cljs-test-runner.main" "-x" "node" "-d" "src/test"]}
 
-           ;:jar       {:replace-deps {seancorfield/depstar {:mvn/version "2.0.165"}}
-           ;            :exec-fn      hf.depstar/jar
-           ;            :exec-args    {:jar "dv.tick-util.jar"}}
-
            :install   {:extra-deps {deps-deploy/deps-deploy {:mvn/version "0.0.12"}}
                        :main-opts  ["-m" "deps-deploy.deps-deploy" "install" "dv.tick-util.jar"]}
 
            :build {:deps {io.github.clojure/tools.build {:mvn/version "0.9.6"}
                           slipset/deps-deploy {:mvn/version "0.2.0"}}
                    :ns-default build}
-
-           ;:deploy    {:extra-deps {deps-deploy/deps-deploy {:mvn/version "0.0.12"}}
-           ;            :main-opts  ["-m" "deps-deploy.deps-deploy" "deploy" "dv.tick-util.jar"]}
 
            :dev       {:extra-paths ["src/test"]
                        :jvm-opts    ["-XX:-OmitStackTraceInFastThrow"]

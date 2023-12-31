@@ -11,5 +11,4 @@ endif
 .RECIPEPREFIX = >
 
 jar:
-> clojure -Spom
-> clojure -X:jar
+> clojure -T:build ci
